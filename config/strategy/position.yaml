@@ -1,0 +1,66 @@
+active: momentum_scalper
+
+strategies:
+  momentum_scalper:
+    ema_fast: 5
+    ema_mid: 10
+    ema_slow: 20
+
+    rsi_period: 14
+    rsi_long_range: [40, 80]        # 진입 범위 대폭 확대
+    rsi_short_range: [20, 60]
+
+    volume_lookback: 5
+    volume_multiplier: 1.0           # 거래량 기준 완화 (1.2 → 1.0, 평균 이상이면 진입)
+
+    # ADX 추세 강도 필터 (횡보장 진입 방지)
+    adx_threshold: 20               # ADX < 20이면 추세 없음으로 판단, 진입 차단
+
+    vwap_enabled: true
+
+    higher_tf:
+      enabled: true
+      timeframe: 15m
+      ema_fast: 5
+      ema_slow: 10
+
+    follow_scanner_direction: false   # 스캐너 방향 제한 해제 (양방향 가능)
+    min_candles_between_trades: 1     # 재진입 대기 최소화
+
+    # Short 방향 최소 confidence (ADX 포함 confidence로 재조정)
+    short_min_confidence: 0.70
+
+    # 자동 튜닝 설정
+    tuner:
+      enabled: true
+      evaluation_window: 30           # 30회 평가마다 튜닝 체크
+      min_signal_rate: 0.05           # 시그널 비율 5% 미만이면 완화
+      max_signal_rate: 0.30           # 시그널 비율 30% 초과이면 강화
+      adjustment_step: 0.1            # 각 파라미터 조절 단위
+
+exit:
+  stop_loss:
+    type: atr
+    atr_period: 14
+    atr_multiplier: 2.0
+    min_pct: 0.5
+    max_pct: 1.5               # Opt-2: reduced from 2.0 to cap SL losses tighter
+
+  take_profit:
+    type: risk_reward
+    risk_reward_ratio: 2.0            # R:R 2.0 (SL 넓어진 만큼 TP도 확대)
+
+  trailing_stop:
+    activation_r: 0.8                # Opt-1: raised from 0.5 to let winners run further before trailing
+    callback_atr_multiplier: 0.8     # Cycle 4: widened from 0.5 to reduce premature trailing exits
+
+  strategy_exit:
+    ema_cross_exit: false
+    rsi_reversal_exit: true
+    volume_dry_exit: false
+    volume_dry_threshold: 0.20
+
+  time_limit:
+    max_holding_minutes: 90
+    warning_minutes: 75
+    force_close_type: market

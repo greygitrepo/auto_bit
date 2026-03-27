@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% block title_suffix %} - Positions{% endblock %}
+
+{% block extra_style %}
+    .position-detail {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    .position-full-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .position-full-card .top-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .position-full-card .symbol {
+        font-size: 1.3rem;
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+    .position-full-card .leverage-tag {
+        background: var(--accent);
+        color: var(--text);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .price-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .price-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .price-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-dim);
+    }
+    .price-value {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .position-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .trailing-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+    }
+    .trailing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    .trailing-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .trailing-dot.inactive { background: var(--text-dim); }
+
+    .chart-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .chart-area {
+        height: 320px;
+        position: relative;
+    }
+    .chart-area canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .no-positions {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-dim);
+    }
+    .no-positions .icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        opacity: 0.3;
+    }
+
+    @media (max-width: 900px) {
+        .position-detail { grid-template-columns: 1fr; }
+    }
+{% endblock %}
+
+{% block content %}
+
+<!-- Open Positions -->
+<div class="card" style="margin-bottom: 16px;">
+    <div class="card-header">Open Positions</div>
+    <div class="position-detail" id="positions-detail">
+        <div class="no-positions">
+            <div class="icon">&#9744;</div>
+            <p>No open positions</p>
+        </div>
+    </div>
+</div>
+
+<!-- Symbol Performance Chart -->
+<div class="card">
+    <div class="card-header">Symbol Performance</div>
+    <div class="chart-controls">
+        <select id="symbol-select">
+            <option value="">Select symbol...</option>
+        </select>
+    </div>
+    <div class="chart-area">
+        <canvas id="symbol-chart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    'use strict';
+
+    const fmt = window.autobit;
+    let symbolChart = null;
+
+    // ── Render position cards ─────────────────────────────────
+    function renderPositions(positions) {
+        const container = document.getElementById('positions-detail');
+
+        if (!positions || positions.length === 0) {
+            container.innerHTML = `
+                <div class="no-positions" style="grid-column: 1/-1;">
+                    <div class="icon">&#9744;</div>
+                    <p>No open positions</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        positions.forEach(pos => {
+            const side = pos.side === 'Buy' ? 'LONG' : 'SHORT';
+            const badgeClass = pos.side === 'Buy' ? 'badge-long' : 'badge-short';
+            const pnl = pos.unrealized_pnl || 0;
+            const pnlPct = pos.unrealized_pnl_pct || 0;
+            const elapsed = pos.elapsed_minutes || 0;
+            const maxHold = pos.max_hold_minutes || 90;
+            const pct = Math.min(100, (elapsed / maxHold) * 100);
+            const barClass = pct > 80 ? 'red' : 'green';
+            const trailingActive = pos.trailing_stop_active || false;
+
+            html += `
+            <div class="card position-full-card">
+                <div class="top-row">
+                    <span class="symbol">${pos.symbol}</span>
+                    <span class="badge ${badgeClass}">${side}</span>
+                    <span class="leverage-tag">${pos.leverage || 1}x</span>
+                </div>
+
+                <div class="price-grid">
+                    <div class="price-item">
+                        <span class="price-label">Entry Price</span>
+                        <span class="price-value">${parseFloat(pos.entry_price).toFixed(4)}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Current Price</span>
+                        <span class="price-value">${parseFloat(pos.current_price || 0).toFixed(4)}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Stop Loss</span>
+                        <span class="price-value negative">${pos.stop_loss ? parseFloat(pos.stop_loss).toFixed(4) : '--'}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Take Profit</span>
+                        <span class="price-value positive">${pos.take_profit ? parseFloat(pos.take_profit).toFixed(4) : '--'}</span>
+                    </div>
+                </div>
+
+                <div class="position-meta-grid">
+                    <div class="price-item">
+                        <span class="price-label">Position Size</span>
+                        <span class="price-value">${parseFloat(pos.size || 0).toFixed(4)}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Unrealized P&L</span>
+                        <span class="price-value ${fmt.pnlClass(pnl)}">${fmt.formatPnl(pnl)} USDT (${fmt.formatPnl(pnlPct)}%)</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="price-label" style="margin-bottom:4px;">Time: ${fmt.formatDuration(elapsed)} / ${fmt.formatDuration(maxHold)}</div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill ${barClass}" style="width:${pct}%"></div>
+                    </div>
+                </div>
+
+                <div class="position-meta-grid">
+                    <div class="price-item">
+                        <span class="price-label">Strategy</span>
+                        <span class="price-value" style="font-size:0.85rem;">${pos.strategy || '--'}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Entry Reason</span>
+                        <span class="price-value" style="font-size:0.85rem;">${pos.entry_reason || '--'}</span>
+                    </div>
+                </div>
+
+                <div class="trailing-status">
+                    <span class="trailing-dot ${trailingActive ? 'active' : 'inactive'}"></span>
+                    <span>Trailing Stop: ${trailingActive ? 'Active' : 'Inactive'}</span>
+                </div>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // ── Symbol Performance Chart ──────────────────────────────
+    function initSymbolChart() {
+        const ctx = document.getElementById('symbol-chart').getContext('2d');
+        symbolChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'P&L (USDT)',
+                    data: [],
+                    backgroundColor: [],
+                    borderRadius: 4,
+                    borderSkipped: false,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return 'P&L: ' + fmt.formatPnl(ctx.raw) + ' USDT';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { maxRotation: 45 },
+                    },
+                    y: {
+                        grid: { color: '#253555' },
+                        ticks: {
+                            callback: function(v) { return v.toFixed(2); }
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    function loadSymbolPerformance(symbol) {
+        if (!symbol) return;
+        fetch('/api/stats/' + encodeURIComponent(symbol))
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.trades) return;
+                const labels = data.trades.map((t, i) => '#' + (i + 1));
+                const values = data.trades.map(t => t.pnl || 0);
+                const colors = values.map(v =>
+                    v >= 0 ? 'rgba(0, 184, 148, 0.8)' : 'rgba(225, 112, 85, 0.8)');
+
+                symbolChart.data.labels = labels;
+                symbolChart.data.datasets[0].data = values;
+                symbolChart.data.datasets[0].backgroundColor = colors;
+                symbolChart.update();
+            })
+            .catch(() => {});
+    }
+
+    // ── Populate symbol dropdown ──────────────────────────────
+    function loadSymbols() {
+        fetch('/api/symbols')
+            .then(r => r.json())
+            .then(symbols => {
+                const sel = document.getElementById('symbol-select');
+                (symbols || []).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(() => {});
+    }
+
+    document.getElementById('symbol-select').addEventListener('change', function() {
+        loadSymbolPerformance(this.value);
+    });
+
+    // ── WebSocket updates ─────────────────────────────────────
+    document.addEventListener('ws:message', function(e) {
+        const msg = e.detail;
+        if (msg.type === 'positions') {
+            renderPositions(msg.data);
+        }
+    });
+
+    // ── Initial load ──────────────────────────────────────────
+    fetch('/api/positions')
+        .then(r => r.json())
+        .then(renderPositions)
+        .catch(() => {});
+
+    initSymbolChart();
+    loadSymbols();
+})();
+</script>
+{% endblock %}

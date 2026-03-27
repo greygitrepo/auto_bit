@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title_suffix %} - History{% endblock %}
+
+{% block extra_style %}
+    .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .filter-group label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-dim);
+        white-space: nowrap;
+    }
+    .table-wrapper {
+        overflow-x: auto;
+        margin-bottom: 16px;
+    }
+    .table-wrapper td {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    .pagination button {
+        background: var(--accent);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .pagination button:hover { background: var(--accent-light); }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pagination .page-info {
+        font-size: 0.85rem;
+        color: var(--text-dim);
+    }
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .exit-chart-area {
+        height: 240px;
+        position: relative;
+    }
+    .exit-chart-area canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 16px;">
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>From</label>
+            <input type="date" id="filter-from">
+        </div>
+        <div class="filter-group">
+            <label>To</label>
+            <input type="date" id="filter-to">
+        </div>
+        <div class="filter-group">
+            <label>Symbol</label>
+            <select id="filter-symbol">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Mode</label>
+            <select id="filter-mode">
+                <option value="">All</option>
+                <option value="paper">Paper</option>
+                <option value="live">Live</option>
+            </select>
+        </div>
+        <button class="btn btn-accent" id="btn-filter" style="padding:8px 16px;">Apply</button>
+    </div>
+</div>
+
+<!-- Performance Summary -->
+<div class="summary-cards" id="perf-summary">
+    <div class="card">
+        <div class="card-header">Total Trades</div>
+        <div class="metric-value" id="sum-total-trades">--</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Win Rate</div>
+        <div class="metric-value" id="sum-win-rate">--</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Profit Factor</div>
+        <div class="metric-value" id="sum-profit-factor">--</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Avg Hold Time</div>
+        <div class="metric-value" id="sum-avg-hold">--</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Best Trade</div>
+        <div class="metric-value positive" id="sum-best-trade">--</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Worst Trade</div>
+        <div class="metric-value negative" id="sum-worst-trade">--</div>
+    </div>
+</div>
+
+<div class="grid-row grid-2">
+    <!-- Trades Table -->
+    <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-header">Trade History</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L</th>
+                        <th>Fee</th>
+                        <th>Duration</th>
+                        <th>Exit Type</th>
+                        <th>Strategy</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-body">
+                    <tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:40px;">Loading trades...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination">
+            <button id="btn-prev" disabled>Prev</button>
+            <span class="page-info" id="page-info">Page 1</span>
+            <button id="btn-next" disabled>Next</button>
+        </div>
+    </div>
+</div>
+
+<!-- Exit Type Breakdown -->
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header">Exit Type Breakdown</div>
+    <div class="exit-chart-area">
+        <canvas id="exit-chart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    'use strict';
+
+    const fmt = window.autobit;
+    let currentPage = 1;
+    const pageSize = 25;
+    let totalPages = 1;
+    let exitChart = null;
+
+    // ── Build query string from filters ───────────────────────
+    function getFilterParams() {
+        const params = new URLSearchParams();
+        const from = document.getElementById('filter-from').value;
+        const to = document.getElementById('filter-to').value;
+        const symbol = document.getElementById('filter-symbol').value;
+        const mode = document.getElementById('filter-mode').value;
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        if (symbol) params.set('symbol', symbol);
+        if (mode) params.set('mode', mode);
+        params.set('page', currentPage);
+        params.set('per_page', pageSize);
+        return params.toString();
+    }
+
+    // ── Render trades table ───────────────────────────────────
+    function renderTrades(response) {
+        const tbody = document.getElementById('trades-body');
+        const trades = response.trades || response;
+        totalPages = response.pages || response.total_pages || 1;
+
+        if (!trades || trades.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:40px;">No trades found</td></tr>';
+            updatePagination();
+            return;
+        }
+
+        let html = '';
+        trades.forEach(t => {
+            const pnl = t.pnl || 0;
+            const duration = t.exit_time && t.entry_time
+                ? Math.round((t.exit_time - t.entry_time) / 60)
+                : '--';
+            const sideClass = t.side === 'Buy' ? 'badge badge-long' : 'badge badge-short';
+            const sideLabel = t.side === 'Buy' ? 'LONG' : 'SHORT';
+
+            html += `<tr>
+                <td>${fmt.formatTime(t.entry_time)}</td>
+                <td>${t.symbol}</td>
+                <td><span class="${sideClass}">${sideLabel}</span></td>
+                <td>${parseFloat(t.entry_price).toFixed(4)}</td>
+                <td>${t.exit_price ? parseFloat(t.exit_price).toFixed(4) : '--'}</td>
+                <td class="${fmt.pnlClass(pnl)}">${fmt.formatPnl(pnl)}</td>
+                <td>${t.fee !== null && t.fee !== undefined ? parseFloat(t.fee).toFixed(4) : '--'}</td>
+                <td>${typeof duration === 'number' ? fmt.formatDuration(duration) : duration}</td>
+                <td>${t.exit_type || '--'}</td>
+                <td>${t.strategy || '--'}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+        updatePagination();
+    }
+
+    function updatePagination() {
+        document.getElementById('page-info').textContent = 'Page ' + currentPage + ' / ' + totalPages;
+        document.getElementById('btn-prev').disabled = currentPage <= 1;
+        document.getElementById('btn-next').disabled = currentPage >= totalPages;
+    }
+
+    // ── Performance summary ───────────────────────────────────
+    function updateSummary(data) {
+        if (!data) return;
+        const el = (id) => document.getElementById(id);
+
+        if (data.total_trades !== undefined) el('sum-total-trades').textContent = data.total_trades;
+        if (data.win_rate !== undefined) el('sum-win-rate').textContent = data.win_rate.toFixed(1) + '%';
+        if (data.profit_factor !== undefined) el('sum-profit-factor').textContent = data.profit_factor.toFixed(2);
+        if (data.avg_hold_minutes !== undefined) el('sum-avg-hold').textContent = fmt.formatDuration(data.avg_hold_minutes);
+        if (data.best_trade !== undefined) el('sum-best-trade').textContent = fmt.formatPnl(data.best_trade) + ' USDT';
+        if (data.worst_trade !== undefined) el('sum-worst-trade').textContent = fmt.formatPnl(data.worst_trade) + ' USDT';
+    }
+
+    // ── Exit type chart ───────────────────────────────────────
+    function initExitChart() {
+        const ctx = document.getElementById('exit-chart').getContext('2d');
+        exitChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#00b894', '#0f3460', '#e17055', '#fdcb6e',
+                        '#a29bfe', '#74b9ff', '#ff7675', '#55efc4',
+                    ],
+                    borderColor: '#16213e',
+                    borderWidth: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 14,
+                            padding: 16,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    function updateExitChart(breakdown) {
+        if (!breakdown || !exitChart) return;
+        const labels = Object.keys(breakdown);
+        const values = Object.values(breakdown);
+
+        exitChart.data.labels = labels;
+        exitChart.data.datasets[0].data = values;
+        exitChart.update();
+    }
+
+    // ── Fetch trades ──────────────────────────────────────────
+    function loadTrades() {
+        const qs = getFilterParams();
+        fetch('/api/trades?' + qs)
+            .then(r => r.json())
+            .then(data => {
+                renderTrades(data);
+                updateSummary(data.summary || {});
+                updateExitChart(data.exit_breakdown || {});
+            })
+            .catch(() => {
+                document.getElementById('trades-body').innerHTML =
+                    '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:40px;">Failed to load trades</td></tr>';
+            });
+    }
+
+    // ── Populate symbol dropdown ──────────────────────────────
+    function loadSymbols() {
+        fetch('/api/symbols')
+            .then(r => r.json())
+            .then(symbols => {
+                const sel = document.getElementById('filter-symbol');
+                (symbols || []).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(() => {});
+    }
+
+    // ── Event listeners ───────────────────────────────────────
+    document.getElementById('btn-filter').addEventListener('click', function() {
+        currentPage = 1;
+        loadTrades();
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', function() {
+        if (currentPage > 1) { currentPage--; loadTrades(); }
+    });
+
+    document.getElementById('btn-next').addEventListener('click', function() {
+        if (currentPage < totalPages) { currentPage++; loadTrades(); }
+    });
+
+    // ── WebSocket updates ─────────────────────────────────────
+    document.addEventListener('ws:message', function(e) {
+        const msg = e.detail;
+        if (msg.type === 'trade_closed') {
+            // Reload the current page to show the new trade
+            loadTrades();
+        }
+    });
+
+    // ── Init ──────────────────────────────────────────────────
+    // Default date range: last 7 days
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 86400000);
+    document.getElementById('filter-to').value = now.toISOString().slice(0, 10);
+    document.getElementById('filter-from').value = weekAgo.toISOString().slice(0, 10);
+
+    initExitChart();
+    loadSymbols();
+    loadTrades();
+})();
+</script>
+{% endblock %}

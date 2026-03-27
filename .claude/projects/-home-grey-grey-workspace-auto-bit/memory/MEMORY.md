@@ -1,0 +1,2 @@
+- [거래 모니터링 기준](feedback_trading_monitoring.md) — 재시작 후 20분 무거래 시 파라미터 문제로 판단, 문제파악→수정→재테스트 사이클
+- [지속적 최적화 작업](project_continuous_optimization.md) — 2026-03-27 09:30 KST까지 파라미터/전략 평가-개선 사이클

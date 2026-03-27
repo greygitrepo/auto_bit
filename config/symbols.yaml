@@ -1,0 +1,21 @@
+# 거래 시장
+market:
+  category: linear
+  quote_currency: USDT
+
+# 상시 수집 (BTC/ETH 추세 판단용)
+base_symbols:
+  - BTCUSDT
+  - ETHUSDT
+
+# 블랙리스트
+blacklist:
+  - USDCUSDT
+
+# 데이터 수집 타임프레임
+timeframes:
+  primary: 5m
+  secondary:
+    - 15m
+  btc_eth_trend: 1h
+  candle_history: 100

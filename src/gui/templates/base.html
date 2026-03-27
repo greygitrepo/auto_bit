@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>auto_bit{% block title_suffix %} - Dashboard{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        /* ── Reset & Base ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary:   #1a1a2e;
+            --bg-card:      #16213e;
+            --bg-hover:     #1b2a4a;
+            --accent:       #0f3460;
+            --accent-light: #1a4a80;
+            --green:        #00b894;
+            --green-dim:    rgba(0, 184, 148, 0.15);
+            --red:          #e17055;
+            --red-dim:      rgba(225, 112, 85, 0.15);
+            --text:         #e0e0e0;
+            --text-dim:     #8899aa;
+            --border:       #253555;
+            --font:         'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono:         'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            --radius:       8px;
+            --transition:   0.2s ease;
+        }
+
+        html { font-size: 14px; }
+        body {
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        a { color: var(--green); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* ── Navigation ───────────────────────────────────────────── */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        .navbar-brand span { color: var(--green); }
+
+        .navbar-tabs {
+            display: flex;
+            gap: 4px;
+            height: 100%;
+            align-items: stretch;
+        }
+
+        .navbar-tabs a {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 0.93rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            border-bottom: 2px solid transparent;
+            transition: color var(--transition), border-color var(--transition);
+            text-decoration: none;
+        }
+        .navbar-tabs a:hover {
+            color: var(--text);
+            text-decoration: none;
+        }
+        .navbar-tabs a.active {
+            color: #fff;
+            border-bottom-color: var(--green);
+        }
+
+        .navbar-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-paper {
+            background: rgba(108, 92, 231, 0.2);
+            color: #a29bfe;
+            border: 1px solid rgba(108, 92, 231, 0.4);
+        }
+        .badge-live {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(225, 112, 85, 0.4);
+        }
+
+        .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+        }
+        .status-dot::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--red);
+            flex-shrink: 0;
+        }
+        .status-dot.running::before {
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+        }
+
+        /* ── Main Content ─────────────────────────────────────────── */
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ── Card System ──────────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .card-header {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        /* ── Grid helpers ─────────────────────────────────────────── */
+        .grid-row {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        @media (max-width: 1024px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .main-content { padding: 12px; }
+        }
+
+        /* ── Metric card ──────────────────────────────────────────── */
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: var(--mono);
+        }
+        .metric-sub {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+
+        /* ── Progress bar ─────────────────────────────────────────── */
+        .progress-bar {
+            height: 6px;
+            background: var(--accent);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .progress-bar-fill.green { background: var(--green); }
+        .progress-bar-fill.red   { background: var(--red); }
+        .progress-bar-fill.blue  { background: var(--accent-light); }
+
+        /* ── Side badges ──────────────────────────────────────────── */
+        .badge-long {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(0, 184, 148, 0.3);
+        }
+        .badge-short {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(225, 112, 85, 0.3);
+        }
+
+        /* ── Tables ───────────────────────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+        tr:hover { background: var(--bg-hover); }
+
+        /* ── Buttons ──────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn:hover { filter: brightness(1.15); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+
+        .btn-green  { background: var(--green); color: #fff; }
+        .btn-red    { background: var(--red); color: #fff; }
+        .btn-accent { background: var(--accent); color: var(--text); }
+
+        /* ── Form controls ────────────────────────────────────────── */
+        select, input[type="date"], input[type="text"] {
+            background: var(--accent);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            font-family: var(--font);
+            font-size: 0.88rem;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+
+        /* ── Scrollbar ────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-light); }
+
+        /* ── Empty state ──────────────────────────────────────────── */
+        .empty-slot {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 0.88rem;
+            min-height: 120px;
+        }
+
+        /* ── Page-specific overrides ──────────────────────────────── */
+        {% block extra_style %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-brand">auto<span>_bit</span></div>
+        <div class="navbar-tabs">
+            <a href="/" class="{% if active_tab == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="/positions" class="{% if active_tab == 'positions' %}active{% endif %}">Positions</a>
+            <a href="/history" class="{% if active_tab == 'history' %}active{% endif %}">History</a>
+            <a href="/settings" class="{% if active_tab == 'settings' %}active{% endif %}">Settings</a>
+        </div>
+        <div class="navbar-status">
+            <span id="mode-badge" class="badge badge-paper">Paper</span>
+            <span id="trading-status" class="status-dot">Stopped</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- WebSocket & global JS -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ── WebSocket with auto-reconnect ─────────────────────────
+        const WS_RECONNECT_DELAY = 2000;
+        const WS_MAX_DELAY = 30000;
+        let ws = null;
+        let wsRetryDelay = WS_RECONNECT_DELAY;
+        let wsListeners = [];
+
+        function getWsUrl() {
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return proto + '//' + location.host + '/ws';
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(getWsUrl());
+
+            ws.onopen = function() {
+                console.log('[WS] Connected');
+                wsRetryDelay = WS_RECONNECT_DELAY;
+                document.dispatchEvent(new CustomEvent('ws:open'));
+            };
+
+            ws.onmessage = function(event) {
+                let data;
+                try {
+                    data = JSON.parse(event.data);
+                } catch(e) {
+                    console.warn('[WS] Non-JSON message:', event.data);
+                    return;
+                }
+                document.dispatchEvent(new CustomEvent('ws:message', { detail: data }));
+            };
+
+            ws.onclose = function(event) {
+                console.log('[WS] Disconnected, reconnecting in', wsRetryDelay, 'ms');
+                document.dispatchEvent(new CustomEvent('ws:close'));
+                setTimeout(connectWebSocket, wsRetryDelay);
+                wsRetryDelay = Math.min(wsRetryDelay * 1.5, WS_MAX_DELAY);
+            };
+
+            ws.onerror = function(err) {
+                console.error('[WS] Error:', err);
+                ws.close();
+            };
+        }
+
+        connectWebSocket();
+
+        // Expose ws globally
+        window.autobit = window.autobit || {};
+        window.autobit.ws = function() { return ws; };
+
+        // ── Global status updater ─────────────────────────────────
+        function updateGlobalStatus(data) {
+            if (data.mode) {
+                const badge = document.getElementById('mode-badge');
+                badge.textContent = data.mode.charAt(0).toUpperCase() + data.mode.slice(1);
+                badge.className = 'badge badge-' + data.mode;
+            }
+            // Support both 'running' (from WS) and 'trading_active' (from API)
+            const isRunning = data.running ?? data.trading_active;
+            if (typeof isRunning !== 'undefined') {
+                const dot = document.getElementById('trading-status');
+                dot.textContent = isRunning ? 'Running' : 'Stopped';
+                dot.className = isRunning ? 'status-dot running' : 'status-dot';
+            }
+        }
+
+        document.addEventListener('ws:message', function(e) {
+            const msg = e.detail;
+            if (msg.type === 'status') {
+                updateGlobalStatus(msg.data);
+            }
+        });
+
+        // Fetch initial status
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(updateGlobalStatus)
+            .catch(() => {});
+
+        // ── Helpers exposed globally ──────────────────────────────
+        window.autobit.formatPnl = function(value) {
+            const sign = value >= 0 ? '+' : '';
+            return sign + value.toFixed(2);
+        };
+
+        window.autobit.pnlClass = function(value) {
+            return value >= 0 ? 'positive' : 'negative';
+        };
+
+        window.autobit.formatDuration = function(minutes) {
+            const h = Math.floor(minutes / 60);
+            const m = Math.round(minutes % 60);
+            return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+        };
+
+        window.autobit.formatTime = function(ts) {
+            return new Date(ts * 1000).toLocaleString();
+        };
+
+        // Chart.js global defaults for dark theme
+        if (window.Chart) {
+            Chart.defaults.color = '#8899aa';
+            Chart.defaults.borderColor = '#253555';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+        }
+    })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

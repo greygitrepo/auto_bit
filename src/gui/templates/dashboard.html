@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title_suffix %} - Dashboard{% endblock %}
+
+{% block extra_style %}
+    .equity-chart-container {
+        height: 360px;
+        margin-bottom: 16px;
+    }
+    #equity-chart {
+        width: 100%;
+        height: 100%;
+        border-radius: var(--radius);
+    }
+    .position-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .position-card .symbol-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .position-card .symbol-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+    .position-card .pnl-value {
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: var(--mono);
+    }
+    .position-card .meta {
+        display: flex;
+        gap: 12px;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+    }
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-dim);
+    }
+    .stat-value {
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: var(--mono);
+    }
+    .drawdown-stages {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    .dd-stage {
+        width: 24px;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--accent);
+    }
+    .dd-stage.active { background: var(--red); }
+    .dd-stage.warn   { background: #fdcb6e; }
+    .dd-stage.ok     { background: var(--green); }
+{% endblock %}
+
+{% block content %}
+
+<!-- Row 1: Summary Cards -->
+<div class="grid-row grid-4">
+    <div class="card">
+        <div class="card-header">Balance</div>
+        <div class="metric-value" id="current-balance">--</div>
+        <div class="metric-sub">Initial: <span id="initial-balance">--</span></div>
+    </div>
+    <div class="card">
+        <div class="card-header">Total P&L</div>
+        <div class="metric-value" id="total-pnl">--</div>
+        <div class="metric-sub" id="total-pnl-pct">--%</div>
+    </div>
+    <div class="card">
+        <div class="card-header">Drawdown</div>
+        <div class="metric-value" id="drawdown-pct">--</div>
+        <div class="drawdown-stages" id="drawdown-stages">
+            <div class="dd-stage"></div>
+            <div class="dd-stage"></div>
+            <div class="dd-stage"></div>
+            <div class="dd-stage"></div>
+            <div class="dd-stage"></div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Today's P&L</div>
+        <div class="metric-value" id="today-pnl">--</div>
+        <div class="metric-sub" id="today-trades">0 trades today</div>
+    </div>
+</div>
+
+<!-- Row 2: Equity Curve -->
+<div class="card equity-chart-container">
+    <div id="equity-chart"></div>
+</div>
+
+<!-- Row 3: Current Positions -->
+<div class="card" style="margin-bottom: 16px;">
+    <div class="card-header">Open Positions</div>
+    <div class="grid-row grid-3" id="positions-grid">
+        <div class="empty-slot">Empty slot</div>
+        <div class="empty-slot">Empty slot</div>
+        <div class="empty-slot">Empty slot</div>
+    </div>
+</div>
+
+<!-- Row 4: Today's Statistics -->
+<div class="grid-row grid-3">
+    <div class="card">
+        <div class="card-header">Trading Stats</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <span class="stat-label">Trades</span>
+                <span class="stat-value" id="stat-trades">0 / 15</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Win Rate</span>
+                <span class="stat-value" id="stat-winrate">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Daily Loss</span>
+                <span class="stat-value" id="stat-daily-loss">-- / --</span>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Market Trend</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <span class="stat-label">BTC</span>
+                <span class="stat-value" id="stat-btc-trend">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">ETH</span>
+                <span class="stat-value" id="stat-eth-trend">--</span>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Risk Status</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <span class="stat-label">Consecutive Losses</span>
+                <span class="stat-value" id="stat-consec-losses">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Cooldown</span>
+                <span class="stat-value" id="stat-cooldown">None</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    'use strict';
+
+    const fmt = window.autobit;
+    let equityChart = null;
+
+    // ── Equity curve (Lightweight Charts) ─────────────────────
+    function initEquityChart() {
+        const container = document.getElementById('equity-chart');
+        equityChart = LightweightCharts.createChart(container, {
+            layout: {
+                background: { color: '#16213e' },
+                textColor: '#8899aa',
+            },
+            grid: {
+                vertLines: { color: '#253555' },
+                horzLines: { color: '#253555' },
+            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            rightPriceScale: { borderColor: '#253555' },
+            timeScale: {
+                borderColor: '#253555',
+                timeVisible: true,
+            },
+        });
+
+        const series = equityChart.addSeries(
+            LightweightCharts.AreaSeries,
+            {
+                topColor: 'rgba(0, 184, 148, 0.3)',
+                bottomColor: 'rgba(0, 184, 148, 0.02)',
+                lineColor: '#00b894',
+                lineWidth: 2,
+            }
+        );
+
+        window._equitySeries = series;
+
+        // Handle resize
+        const resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                equityChart.applyOptions({
+                    width: entry.contentRect.width,
+                    height: entry.contentRect.height,
+                });
+            }
+        });
+        resizeObserver.observe(container);
+
+        // Load initial data
+        fetch('/api/equity-curve')
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    series.setData(data.map(d => ({
+                        time: d.date || d.time || d.timestamp,
+                        value: d.cumulative_pnl !== undefined
+                            ? d.cumulative_pnl
+                            : (d.balance || d.value || d.equity || 0),
+                    })));
+                    equityChart.timeScale().fitContent();
+                }
+            })
+            .catch(() => {});
+    }
+
+    // ── Summary cards ─────────────────────────────────────────
+    function updateSummary(data) {
+        if (!data) return;
+
+        if (data.initial_balance !== undefined) {
+            document.getElementById('initial-balance').textContent =
+                parseFloat(data.initial_balance).toFixed(2) + ' USDT';
+        }
+        if (data.current_balance !== undefined) {
+            document.getElementById('current-balance').textContent =
+                parseFloat(data.current_balance).toFixed(2) + ' USDT';
+        }
+        if (data.total_pnl !== undefined) {
+            const el = document.getElementById('total-pnl');
+            el.textContent = fmt.formatPnl(data.total_pnl) + ' USDT';
+            el.className = 'metric-value ' + fmt.pnlClass(data.total_pnl);
+        }
+        if (data.total_pnl_pct !== undefined) {
+            const el = document.getElementById('total-pnl-pct');
+            el.textContent = fmt.formatPnl(data.total_pnl_pct) + '%';
+            el.className = 'metric-sub ' + fmt.pnlClass(data.total_pnl_pct);
+        }
+        if (data.drawdown_pct !== undefined) {
+            const el = document.getElementById('drawdown-pct');
+            el.textContent = data.drawdown_pct.toFixed(2) + '%';
+            el.className = 'metric-value ' + (data.drawdown_pct > 5 ? 'negative' : '');
+            updateDrawdownStages(data.drawdown_stage || 0);
+        }
+        if (data.today_pnl !== undefined) {
+            const el = document.getElementById('today-pnl');
+            el.textContent = fmt.formatPnl(data.today_pnl) + ' USDT';
+            el.className = 'metric-value ' + fmt.pnlClass(data.today_pnl);
+        }
+        if (data.today_trades !== undefined) {
+            document.getElementById('today-trades').textContent =
+                data.today_trades + ' trades today';
+        }
+    }
+
+    function updateDrawdownStages(stage) {
+        const stages = document.querySelectorAll('#drawdown-stages .dd-stage');
+        stages.forEach((el, i) => {
+            el.className = 'dd-stage';
+            if (i < stage) {
+                el.classList.add(stage >= 4 ? 'active' : stage >= 2 ? 'warn' : 'ok');
+            }
+        });
+    }
+
+    // ── Position cards ────────────────────────────────────────
+    function renderPositions(positions) {
+        const grid = document.getElementById('positions-grid');
+        const maxSlots = 3;
+        let html = '';
+
+        if (!positions || positions.length === 0) {
+            for (let i = 0; i < maxSlots; i++) {
+                html += '<div class="empty-slot">Empty slot</div>';
+            }
+        } else {
+            positions.slice(0, maxSlots).forEach(pos => {
+                const side = pos.side === 'Buy' ? 'LONG' : 'SHORT';
+                const badgeClass = pos.side === 'Buy' ? 'badge-long' : 'badge-short';
+                const pnl = pos.unrealized_pnl || 0;
+                const elapsed = pos.elapsed_minutes || 0;
+                const maxHold = pos.max_hold_minutes || 90;
+                const pct = Math.min(100, (elapsed / maxHold) * 100);
+                const barClass = pct > 80 ? 'red' : 'green';
+
+                html += `
+                <div class="card position-card">
+                    <div class="symbol-row">
+                        <span class="symbol-name">${pos.symbol}</span>
+                        <span class="badge ${badgeClass}">${side}</span>
+                    </div>
+                    <div class="symbol-row">
+                        <span class="pnl-value ${fmt.pnlClass(pnl)}">${fmt.formatPnl(pnl)} USDT</span>
+                    </div>
+                    <div class="meta">
+                        <span>Entry: ${parseFloat(pos.entry_price).toFixed(4)}</span>
+                        <span>${pos.leverage || 1}x</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill ${barClass}" style="width:${pct}%"></div>
+                    </div>
+                    <div class="meta">
+                        <span>${fmt.formatDuration(elapsed)} / ${fmt.formatDuration(maxHold)}</span>
+                    </div>
+                </div>`;
+            });
+            for (let i = positions.length; i < maxSlots; i++) {
+                html += '<div class="empty-slot">Empty slot</div>';
+            }
+        }
+
+        grid.innerHTML = html;
+    }
+
+    // ── Today's stats ─────────────────────────────────────────
+    function updateStats(data) {
+        if (!data) return;
+
+        if (data.trade_count !== undefined) {
+            document.getElementById('stat-trades').textContent =
+                data.trade_count + ' / ' + (data.max_trades || 15);
+        }
+        if (data.win_rate !== undefined) {
+            document.getElementById('stat-winrate').textContent =
+                data.win_rate.toFixed(1) + '%';
+        }
+        if (data.daily_loss !== undefined) {
+            document.getElementById('stat-daily-loss').textContent =
+                data.daily_loss.toFixed(2) + ' / ' + (data.daily_loss_limit || '--');
+        }
+        if (data.btc_trend !== undefined) {
+            const el = document.getElementById('stat-btc-trend');
+            el.textContent = data.btc_trend;
+            el.className = 'stat-value ' +
+                (data.btc_trend === 'Bullish' ? 'positive' : data.btc_trend === 'Bearish' ? 'negative' : '');
+        }
+        if (data.eth_trend !== undefined) {
+            const el = document.getElementById('stat-eth-trend');
+            el.textContent = data.eth_trend;
+            el.className = 'stat-value ' +
+                (data.eth_trend === 'Bullish' ? 'positive' : data.eth_trend === 'Bearish' ? 'negative' : '');
+        }
+        if (data.consecutive_losses !== undefined) {
+            document.getElementById('stat-consec-losses').textContent =
+                data.consecutive_losses;
+        }
+        if (data.cooldown !== undefined) {
+            const el = document.getElementById('stat-cooldown');
+            el.textContent = data.cooldown || 'None';
+            el.className = 'stat-value ' + (data.cooldown ? 'negative' : '');
+        }
+    }
+
+    // ── WebSocket updates ─────────────────────────────────────
+    document.addEventListener('ws:message', function(e) {
+        const msg = e.detail;
+        switch (msg.type) {
+            case 'summary':
+                updateSummary(msg.data);
+                break;
+            case 'positions':
+                renderPositions(msg.data);
+                break;
+            case 'stats':
+                updateStats(msg.data);
+                break;
+            case 'equity_update':
+                if (window._equitySeries && msg.data) {
+                    window._equitySeries.update({
+                        time: msg.data.time || msg.data.timestamp,
+                        value: msg.data.value || msg.data.equity,
+                    });
+                }
+                break;
+        }
+    });
+
+    // ── Initial data load ─────────────────────────────────────
+    function loadInitialData() {
+        fetch('/api/summary')
+            .then(r => r.json())
+            .then(updateSummary)
+            .catch(() => {});
+
+        fetch('/api/positions')
+            .then(r => r.json())
+            .then(renderPositions)
+            .catch(() => {});
+
+        fetch('/api/stats/today')
+            .then(r => r.json())
+            .then(updateStats)
+            .catch(() => {});
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    initEquityChart();
+    loadInitialData();
+})();
+</script>
+{% endblock %}

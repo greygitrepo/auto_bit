@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+{% block title_suffix %} - Settings{% endblock %}
+
+{% block extra_style %}
+    .control-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .control-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .btn-large {
+        padding: 16px 40px;
+        font-size: 1.1rem;
+        border-radius: 10px;
+        min-width: 140px;
+    }
+    .btn-yellow {
+        background: #fdcb6e;
+        color: #1a1a2e;
+    }
+    .stop-options {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+    }
+    .stop-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 0.88rem;
+        color: var(--text-dim);
+    }
+    .stop-option input[type="radio"] {
+        accent-color: var(--green);
+    }
+    .config-table {
+        width: 100%;
+    }
+    .config-table td {
+        padding: 10px 14px;
+    }
+    .config-table td:first-child {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+        width: 45%;
+    }
+    .config-table td:last-child {
+        font-family: var(--mono);
+        font-weight: 600;
+    }
+    .process-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .process-row:last-child { border-bottom: none; }
+    .process-name {
+        font-weight: 600;
+        font-family: var(--mono);
+        width: 120px;
+    }
+    .process-desc {
+        flex: 1;
+        font-size: 0.85rem;
+        color: var(--text-dim);
+    }
+    .process-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+    }
+    .process-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .process-dot.alive { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .process-dot.dead  { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .process-dot.na    { background: var(--text-dim); }
+
+    .system-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .action-feedback {
+        padding: 10px 16px;
+        border-radius: var(--radius);
+        font-size: 0.88rem;
+        display: none;
+        margin-top: 12px;
+    }
+    .action-feedback.success {
+        display: block;
+        background: var(--green-dim);
+        color: var(--green);
+        border: 1px solid rgba(0, 184, 148, 0.3);
+    }
+    .action-feedback.error {
+        display: block;
+        background: var(--red-dim);
+        color: var(--red);
+        border: 1px solid rgba(225, 112, 85, 0.3);
+    }
+{% endblock %}
+
+{% block content %}
+
+<div class="grid-row grid-2">
+    <!-- Trading Control -->
+    <div class="card control-panel">
+        <div class="card-header">Trading Control</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span style="color:var(--text-dim);font-size:0.85rem;">Current Mode:</span>
+            <span id="settings-mode-badge" class="badge badge-paper">Paper</span>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn btn-green btn-large" id="btn-start">Start</button>
+            <button class="btn btn-red btn-large" id="btn-stop">Stop</button>
+            <button class="btn btn-yellow btn-large" id="btn-pause">Pause</button>
+        </div>
+
+        <div class="stop-options">
+            <label class="stop-option">
+                <input type="radio" name="stop-mode" value="graceful" checked>
+                Wait for positions to close
+            </label>
+            <label class="stop-option">
+                <input type="radio" name="stop-mode" value="force">
+                Force close all
+            </label>
+        </div>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn btn-accent btn-large" id="btn-reset" style="background:#e17055;color:#fff;">Reset Paper Trading</button>
+                <span style="color:var(--text-dim);font-size:0.82rem;">Clear all trades, positions, and start fresh with initial balance</span>
+            </div>
+        </div>
+
+        <div class="action-feedback" id="action-feedback"></div>
+    </div>
+
+    <!-- System Status -->
+    <div class="card">
+        <div class="card-header">System Status</div>
+        <div id="process-list">
+            <div class="process-row">
+                <span class="process-name">P1</span>
+                <span class="process-desc">Data Collector</span>
+                <span class="process-status">
+                    <span class="process-dot na" id="dot-p1"></span>
+                    <span id="status-p1">Unknown</span>
+                </span>
+            </div>
+            <div class="process-row">
+                <span class="process-name">P2</span>
+                <span class="process-desc">Strategy Engine</span>
+                <span class="process-status">
+                    <span class="process-dot na" id="dot-p2"></span>
+                    <span id="status-p2">Unknown</span>
+                </span>
+            </div>
+            <div class="process-row">
+                <span class="process-name">P3</span>
+                <span class="process-desc">Order Manager</span>
+                <span class="process-status">
+                    <span class="process-dot na" id="dot-p3"></span>
+                    <span id="status-p3">Unknown</span>
+                </span>
+            </div>
+            <div class="process-row">
+                <span class="process-name">P5</span>
+                <span class="process-desc">GUI Server</span>
+                <span class="process-status">
+                    <span class="process-dot alive" id="dot-p5"></span>
+                    <span id="status-p5">Running</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="system-meta">
+            <div class="stat-item">
+                <span class="stat-label">DB Size</span>
+                <span class="stat-value" id="sys-db-size">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Uptime</span>
+                <span class="stat-value" id="sys-uptime">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Last Scan</span>
+                <span class="stat-value" id="sys-last-scan">--</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Tuner -->
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header">Strategy Tuner</div>
+    <div class="grid-row grid-2" style="margin-bottom:0;">
+        <div>
+            <table class="config-table">
+                <tbody>
+                    <tr><td>Current Level</td><td id="tuner-level">--</td></tr>
+                    <tr><td>Signal Rate</td><td id="tuner-rate">--</td></tr>
+                    <tr><td>Stable Streak</td><td id="tuner-streak">--</td></tr>
+                    <tr><td>EMA Mode</td><td id="tuner-ema">--</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <table class="config-table">
+                <tbody>
+                    <tr><td>RSI Long Range</td><td id="tuner-rsi-long">--</td></tr>
+                    <tr><td>RSI Short Range</td><td id="tuner-rsi-short">--</td></tr>
+                    <tr><td>Volume Mult</td><td id="tuner-vol">--</td></tr>
+                    <tr><td>VWAP / HTF</td><td id="tuner-filters">--</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+        <div id="tuner-proposal" style="display:none;flex:1;padding:10px 16px;border-radius:var(--radius);background:var(--green-dim);color:var(--green);border:1px solid rgba(0,184,148,0.3);font-size:0.88rem;">
+            Stable parameters detected. Apply to config?
+        </div>
+        <button class="btn btn-green" id="btn-tuner-apply" style="display:none;">Apply to YAML</button>
+        <button class="btn btn-accent" id="btn-tuner-reset">Reset Tuner</button>
+    </div>
+    <div class="action-feedback" id="tuner-feedback"></div>
+    <div style="margin-top:12px;">
+        <div class="card-header" style="margin-bottom:8px;">Tuning History</div>
+        <div id="tuner-history" style="font-size:0.82rem;color:var(--text-dim);max-height:150px;overflow-y:auto;">
+            No history yet
+        </div>
+    </div>
+</div>
+
+<!-- Current Configuration (read-only) -->
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header">Current Configuration</div>
+    <div class="grid-row grid-2" style="margin-bottom:0;">
+        <div>
+            <table class="config-table">
+                <tbody id="config-left">
+                    <tr><td>Scanner Strategy</td><td id="cfg-scanner">--</td></tr>
+                    <tr><td>Position Strategy</td><td id="cfg-position">--</td></tr>
+                    <tr><td>Asset Strategy</td><td id="cfg-asset">--</td></tr>
+                    <tr><td>Max Positions</td><td id="cfg-max-positions">--</td></tr>
+                    <tr><td>Capital per Position</td><td id="cfg-capital-per">--</td></tr>
+                    <tr><td>Risk per Trade</td><td id="cfg-risk-per">--</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <table class="config-table">
+                <tbody id="config-right">
+                    <tr><td>Max Leverage</td><td id="cfg-max-leverage">--</td></tr>
+                    <tr><td>Max Holding Time</td><td id="cfg-max-hold">--</td></tr>
+                    <tr><td>Max Daily Trades</td><td id="cfg-max-daily">--</td></tr>
+                    <tr><td>Daily Loss Limit</td><td id="cfg-daily-loss-limit">--</td></tr>
+                    <tr><td>Drawdown Stage 1</td><td id="cfg-dd-stage1">--</td></tr>
+                    <tr><td>Drawdown Stage 2</td><td id="cfg-dd-stage2">--</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    'use strict';
+
+    const fmt = window.autobit;
+
+    // ── Action feedback ───────────────────────────────────────
+    function showFeedback(message, isError) {
+        const el = document.getElementById('action-feedback');
+        el.textContent = message;
+        el.className = 'action-feedback ' + (isError ? 'error' : 'success');
+        setTimeout(() => { el.className = 'action-feedback'; }, 5000);
+    }
+
+    // ── Trading control buttons ───────────────────────────────
+    function sendCommand(action) {
+        const stopMode = document.querySelector('input[name="stop-mode"]:checked').value;
+        let url, body;
+
+        if (action === 'start') {
+            url = '/api/trading/start';
+            body = {};
+        } else if (action === 'stop') {
+            url = '/api/trading/stop';
+            body = { force_close: stopMode === 'force' };
+        } else if (action === 'pause') {
+            url = '/api/trading/pause';
+            body = {};
+        } else {
+            showFeedback('Unknown action: ' + action, true);
+            return;
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showFeedback('Error: ' + data.error, true);
+            } else {
+                showFeedback(data.message || (action + ' command sent'), false);
+            }
+        })
+        .catch(err => {
+            showFeedback('Request failed: ' + err.message, true);
+        });
+    }
+
+    document.getElementById('btn-start').addEventListener('click', () => sendCommand('start'));
+    document.getElementById('btn-stop').addEventListener('click', () => sendCommand('stop'));
+    document.getElementById('btn-pause').addEventListener('click', () => sendCommand('pause'));
+
+    // Reset paper trading
+    document.getElementById('btn-reset').addEventListener('click', function() {
+        if (!confirm('Reset paper trading?\n\nThis will:\n- Delete all trade history\n- Close all positions\n- Reset balance to initial\n- Clear tuner state\n- Automatically restart trading processes')) {
+            return;
+        }
+        showFeedback('Resetting and restarting...', false);
+        fetch('/api/trading/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                showFeedback('Reset complete! System is restarting with fresh state...', false);
+                // Reload page after a few seconds to show fresh data
+                setTimeout(() => location.reload(), 5000);
+            } else {
+                showFeedback('Error: ' + (data.detail || 'unknown'), true);
+            }
+        })
+        .catch(err => showFeedback('Request failed: ' + err.message, true));
+    });
+
+    // ── Process status ────────────────────────────────────────
+    function updateProcessStatus(processes) {
+        if (!processes) return;
+        ['p1', 'p2', 'p3', 'p5'].forEach(p => {
+            const info = processes[p];
+            if (!info) return;
+            const dot = document.getElementById('dot-' + p);
+            const label = document.getElementById('status-' + p);
+            if (info.status === 'alive' || info.status === 'running') {
+                dot.className = 'process-dot alive';
+                label.textContent = 'Running';
+                label.style.color = 'var(--green)';
+            } else if (info.status === 'dead' || info.status === 'stopped') {
+                dot.className = 'process-dot dead';
+                label.textContent = 'Stopped';
+                label.style.color = 'var(--red)';
+            } else {
+                dot.className = 'process-dot na';
+                label.textContent = info.status || 'N/A';
+                label.style.color = 'var(--text-dim)';
+            }
+        });
+    }
+
+    // ── System info ───────────────────────────────────────────
+    function updateSystemInfo(data) {
+        if (!data) return;
+        if (data.db_size !== undefined) {
+            const mb = (data.db_size / (1024 * 1024)).toFixed(2);
+            document.getElementById('sys-db-size').textContent = mb + ' MB';
+        }
+        if (data.uptime !== undefined) {
+            document.getElementById('sys-uptime').textContent =
+                fmt.formatDuration(data.uptime / 60);
+        }
+        if (data.last_scan_time !== undefined) {
+            document.getElementById('sys-last-scan').textContent =
+                data.last_scan_time ? fmt.formatTime(data.last_scan_time) : 'Never';
+        }
+    }
+
+    // ── Configuration ─────────────────────────────────────────
+    function updateConfig(cfg) {
+        if (!cfg) return;
+        const el = (id) => document.getElementById(id);
+
+        if (cfg.scanner)       el('cfg-scanner').textContent = cfg.scanner;
+        if (cfg.position)      el('cfg-position').textContent = cfg.position;
+        if (cfg.asset)         el('cfg-asset').textContent = cfg.asset;
+        if (cfg.max_positions !== undefined) el('cfg-max-positions').textContent = cfg.max_positions;
+        if (cfg.capital_per_position !== undefined) el('cfg-capital-per').textContent = cfg.capital_per_position + ' USDT';
+        if (cfg.risk_per_trade !== undefined) el('cfg-risk-per').textContent = (cfg.risk_per_trade * 100).toFixed(1) + '%';
+        if (cfg.max_leverage !== undefined)  el('cfg-max-leverage').textContent = cfg.max_leverage + 'x';
+        if (cfg.max_hold_minutes !== undefined) el('cfg-max-hold').textContent = fmt.formatDuration(cfg.max_hold_minutes);
+        if (cfg.max_daily_trades !== undefined) el('cfg-max-daily').textContent = cfg.max_daily_trades;
+        if (cfg.daily_loss_limit !== undefined) el('cfg-daily-loss-limit').textContent = cfg.daily_loss_limit + ' USDT';
+        if (cfg.drawdown_stage1 !== undefined) el('cfg-dd-stage1').textContent = (cfg.drawdown_stage1 * 100).toFixed(1) + '%';
+        if (cfg.drawdown_stage2 !== undefined) el('cfg-dd-stage2').textContent = (cfg.drawdown_stage2 * 100).toFixed(1) + '%';
+    }
+
+    // ── Mode badge ────────────────────────────────────────────
+    function updateModeBadge(mode) {
+        if (!mode) return;
+        const badge = document.getElementById('settings-mode-badge');
+        badge.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        badge.className = 'badge badge-' + mode;
+    }
+
+    // ── WebSocket updates ─────────────────────────────────────
+    document.addEventListener('ws:message', function(e) {
+        const msg = e.detail;
+        if (msg.type === 'status') {
+            if (msg.data.mode) updateModeBadge(msg.data.mode);
+            if (msg.data.processes) updateProcessStatus(msg.data.processes);
+        }
+        if (msg.type === 'system_info') {
+            updateSystemInfo(msg.data);
+        }
+    });
+
+    // ── Initial load ──────────────────────────────────────────
+    fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.mode) updateModeBadge(data.mode);
+            if (data.processes) updateProcessStatus(data.processes);
+        })
+        .catch(() => {});
+
+    fetch('/api/system-info')
+        .then(r => r.json())
+        .then(updateSystemInfo)
+        .catch(() => {});
+
+    fetch('/api/config')
+        .then(r => r.json())
+        .then(updateConfig)
+        .catch(() => {});
+
+    // ── Tuner ─────────────────────────────────────────────────
+    function showTunerFeedback(message, isError) {
+        const el = document.getElementById('tuner-feedback');
+        el.textContent = message;
+        el.className = 'action-feedback ' + (isError ? 'error' : 'success');
+        setTimeout(() => { el.className = 'action-feedback'; }, 5000);
+    }
+
+    function updateTuner(data) {
+        if (!data) return;
+        const el = (id) => document.getElementById(id);
+
+        el('tuner-level').textContent = 'L' + data.level + ' / L' + (data.max_level || 6);
+        el('tuner-level').style.color = data.level === 0 ? 'var(--green)' : data.level >= 4 ? 'var(--red)' : '#fdcb6e';
+
+        el('tuner-rate').textContent = (data.signal_rate * 100).toFixed(1) + '%';
+        el('tuner-streak').textContent = data.stable_streak + ' windows';
+
+        const p = data.current_params || {};
+        el('tuner-rsi-long').textContent = JSON.stringify(p.rsi_long || '--');
+        el('tuner-rsi-short').textContent = JSON.stringify(p.rsi_short || '--');
+        el('tuner-vol').textContent = p.vol_mult !== undefined ? p.vol_mult : '--';
+        el('tuner-ema').textContent = p.ema || 'strict';
+        el('tuner-filters').textContent =
+            (p.vwap ? 'VWAP:ON' : 'VWAP:OFF') + ' / ' +
+            (p.htf ? 'HTF:ON' : 'HTF:OFF');
+
+        // Show apply button if proposed
+        if (data.yaml_proposed) {
+            el('tuner-proposal').style.display = 'block';
+            el('btn-tuner-apply').style.display = 'inline-flex';
+        } else {
+            el('tuner-proposal').style.display = 'none';
+            el('btn-tuner-apply').style.display = 'none';
+        }
+
+        // Render history
+        const histEl = el('tuner-history');
+        if (data.history && data.history.length > 0) {
+            histEl.innerHTML = data.history.map(h => {
+                const d = new Date(h.time * 1000).toLocaleTimeString();
+                return '<div>L' + h.old_level + ' → L' + h.new_level +
+                    ' (rate=' + (h.signal_rate * 100).toFixed(1) + '%) at ' + d + '</div>';
+            }).join('');
+        }
+    }
+
+    // Tuner apply button
+    document.getElementById('btn-tuner-apply').addEventListener('click', function() {
+        fetch('/api/tuner/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showTunerFeedback(data.message, false);
+                } else {
+                    showTunerFeedback('Error: ' + (data.detail || 'unknown'), true);
+                }
+            })
+            .catch(err => showTunerFeedback('Request failed: ' + err.message, true));
+    });
+
+    // Tuner reset button
+    document.getElementById('btn-tuner-reset').addEventListener('click', function() {
+        fetch('/api/tuner/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showTunerFeedback(data.message, false);
+                    loadTuner();
+                } else {
+                    showTunerFeedback('Error: ' + (data.detail || 'unknown'), true);
+                }
+            })
+            .catch(err => showTunerFeedback('Request failed: ' + err.message, true));
+    });
+
+    function loadTuner() {
+        fetch('/api/tuner')
+            .then(r => r.json())
+            .then(updateTuner)
+            .catch(() => {});
+    }
+
+    loadTuner();
+    // Refresh tuner every 30s
+    setInterval(loadTuner, 30000);
+})();
+</script>
+{% endblock %}
