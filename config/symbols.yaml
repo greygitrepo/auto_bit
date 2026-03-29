@@ -17,5 +17,6 @@ timeframes:
   primary: 5m
   secondary:
     - 15m
+    - 1h                # 그리드 전략 바이어스 계산용 (모든 트레이딩 심볼)
   btc_eth_trend: 1h
   candle_history: 100

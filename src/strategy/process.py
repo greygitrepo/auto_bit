@@ -22,13 +22,15 @@ from loguru import logger
 from src.collector.bybit_client import BybitClient
 from src.collector.symbol_manager import SymbolManager
 from src.indicators.technical import IndicatorEngine
-from src.strategy.position.base import SignalType
+from src.strategy.position.base import GridAction, SignalType
+from src.strategy.position.grid_bias import GridBiasStrategy
 from src.strategy.position.momentum_scalper import MomentumScalper
 from src.strategy.scanner.new_listing import NewListingScanner
 from src.strategy.tuner import StrategyTuner
 from src.utils.logger import setup_logger
 from src.utils.messages import (
     ControlMessage,
+    GridSignalMessage,
     MarketDataMessage,
     PositionUpdateMessage,
     ScanResultMessage,
@@ -145,13 +147,23 @@ class StrategyEngineProcess(multiprocessing.Process):
     def _init_components(self) -> None:
         """Create strategy objects and internal caches."""
         # --- Config unpacking ---
-        tf_cfg = self._config.get("timeframes", {})
+        # Config may have timeframes/base_symbols at root (legacy) or
+        # under "symbols" key (from Orchestrator _process_config).
+        symbols_cfg = self._config.get("symbols", {})
+        tf_cfg = (
+            self._config.get("timeframes")
+            or symbols_cfg.get("timeframes", {})
+        )
         self._primary_tf: str = tf_cfg.get("primary", "5m")
         self._secondary_tfs: list[str] = tf_cfg.get("secondary", ["15m"])
         self._trend_tf: str = tf_cfg.get("btc_eth_trend", "1h")
-        self._candle_history: int = self._config.get("candle_history", 100)
-        self._base_symbols: list[str] = self._config.get(
-            "base_symbols", ["BTCUSDT", "ETHUSDT"]
+        self._candle_history: int = (
+            tf_cfg.get("candle_history")
+            or self._config.get("candle_history", 100)
+        )
+        self._base_symbols: list[str] = (
+            self._config.get("base_symbols")
+            or symbols_cfg.get("base_symbols", ["BTCUSDT", "ETHUSDT"])
         )
 
         # --- Rolling DataFrame cache: {(symbol, timeframe): pd.DataFrame} ---
@@ -182,28 +194,44 @@ class StrategyEngineProcess(multiprocessing.Process):
         self._symbol_manager = SymbolManager(self._rest_client)
         self._scanner = NewListingScanner(self._symbol_manager, nl_cfg)
 
-        # --- Position strategy ---
-        position_cfg = self._config.get("position", {})
-        ms_cfg = position_cfg.get("strategies", {}).get("momentum_scalper", {})
-        # exit 섹션은 yaml 최상위에 있으므로 전략 config에 합쳐서 전달
-        exit_cfg = position_cfg.get("exit", {})
-        if exit_cfg and "exit" not in ms_cfg:
-            ms_cfg["exit"] = exit_cfg
-        self._scalper = MomentumScalper(config=ms_cfg if ms_cfg else None)
-
-        # --- Database for tuner persistence ---
+        # --- Database ---
         from src.utils.db import DatabaseManager
         self._db = DatabaseManager()
 
-        # --- Strategy Tuner (with DB persistence) ---
-        tuner_cfg = ms_cfg.get("tuner", {})
-        self._tuner = StrategyTuner(
-            config=tuner_cfg,
-            initial_params=self._scalper.params,
-            db=self._db,
-        )
-        # Restore previous tuning state from DB
-        self._tuner.restore_from_db(self._scalper.params)
+        # --- Determine active strategy mode ---
+        position_cfg = self._config.get("position", {})
+        grid_cfg = self._config.get("grid", {})
+        self._strategy_mode = grid_cfg.get("active", "") if grid_cfg else ""
+
+        if self._strategy_mode == "grid_bias":
+            # --- Grid Bias Strategy ---
+            self._grid_strategy = GridBiasStrategy(grid_cfg, db=self._db)
+            self._grid_strategy.restore_from_db(
+                self._config.get("mode", "paper"),
+            )
+            self._scalper = None
+            self._tuner = None
+            # Funding rate fetch tracking
+            self._last_funding_fetch: float = 0.0
+            self._funding_fetch_interval: float = 3600.0  # 1 hour
+            logger.info("P2 using Grid Bias strategy")
+        else:
+            # --- Legacy MomentumScalper ---
+            self._grid_strategy = None
+            ms_cfg = position_cfg.get("strategies", {}).get("momentum_scalper", {})
+            exit_cfg = position_cfg.get("exit", {})
+            if exit_cfg and "exit" not in ms_cfg:
+                ms_cfg["exit"] = exit_cfg
+            self._scalper = MomentumScalper(config=ms_cfg if ms_cfg else None)
+
+            tuner_cfg = ms_cfg.get("tuner", {})
+            self._tuner = StrategyTuner(
+                config=tuner_cfg,
+                initial_params=self._scalper.params,
+                db=self._db,
+            )
+            self._tuner.restore_from_db(self._scalper.params)
+            logger.info("P2 using MomentumScalper strategy")
 
         # --- Load base symbol history via API ---
         for sym in self._base_symbols:
@@ -384,7 +412,10 @@ class StrategyEngineProcess(multiprocessing.Process):
             timeframe == self._primary_tf
             and symbol in self._active_trading_symbols
         ):
-            self._evaluate_strategy(symbol)
+            if self._grid_strategy is not None:
+                self._evaluate_grid_strategy(symbol, candle)
+            else:
+                self._evaluate_strategy(symbol)
 
     def _evaluate_strategy(self, symbol: str) -> None:
         """Run MomentumScalper on the latest data for *symbol*.
@@ -467,6 +498,95 @@ class StrategyEngineProcess(multiprocessing.Process):
             logger.warning("P2 signal_queue full -- dropping signal for {}", symbol)
 
     # ------------------------------------------------------------------
+    # Grid strategy evaluation
+    # ------------------------------------------------------------------
+
+    def _evaluate_grid_strategy(self, symbol: str, candle: Dict[str, Any]) -> None:
+        """Run GridBiasStrategy on the latest candle for *symbol*.
+
+        Emits GridSignalMessage objects to P3 for each grid action.
+        """
+        if self._grid_strategy is None:
+            return
+
+        # Fetch 1h indicators for this symbol
+        df_1h = self._get_indicators(symbol, "1h")
+        if df_1h is None:
+            # Try trend_tf as fallback
+            df_1h = self._get_indicators(symbol, self._trend_tf)
+
+        # Get BTC/ETH trends
+        btc_trend, eth_trend = self._get_market_trends()
+
+        # Periodically fetch funding rates
+        self._maybe_fetch_funding_rates()
+
+        # Get balance info
+        mode = self._config.get("mode", "paper")
+        asset_cfg = self._config.get("asset", {})
+        initial_balance = asset_cfg.get("capital", {}).get("initial_balance", 20.0)
+        current_balance = self._balance if self._balance > 0 else initial_balance
+
+        # Evaluate grid
+        signals = self._grid_strategy.evaluate(
+            symbol=symbol,
+            candle_5m=candle,
+            df_1h=df_1h,
+            btc_trend=btc_trend,
+            eth_trend=eth_trend,
+            current_balance=current_balance,
+            initial_balance=initial_balance,
+            mode=mode,
+        )
+
+        if not signals:
+            return
+
+        # Send each grid signal to P3
+        for sig in signals:
+            grid_state = self._grid_strategy._grids.get(symbol)
+            msg = GridSignalMessage(
+                symbol=sig.symbol,
+                action=sig.action.value,
+                level_id=sig.level_id,
+                level_index=sig.level_index,
+                level_price=sig.level_price,
+                side=sig.side,
+                tp_price=sig.tp_price,
+                grid_state_id=sig.grid_state_id,
+                qty_per_level=grid_state.qty_per_level if grid_state else 0,
+                leverage=grid_state.leverage if grid_state else 5,
+                reason=sig.reason,
+            )
+            try:
+                self._signal_queue.put_nowait(msg)
+                logger.info(
+                    "P2 grid signal: {} {} idx={} side={} price={:.6f}",
+                    symbol, sig.action.value, sig.level_index,
+                    sig.side, sig.level_price,
+                )
+            except queue.Full:
+                logger.warning("P2 signal_queue full -- dropping grid signal")
+
+    def _maybe_fetch_funding_rates(self) -> None:
+        """Periodically fetch funding rates for active symbols."""
+        if self._grid_strategy is None:
+            return
+        now = time.time()
+        if now - self._last_funding_fetch < self._funding_fetch_interval:
+            return
+        self._last_funding_fetch = now
+
+        for symbol in self._active_trading_symbols:
+            try:
+                rates = self._rest_client.get_funding_rate(symbol)
+                if rates:
+                    rate = float(rates[0].get("fundingRate", 0))
+                    self._grid_strategy.update_funding_rate(symbol, rate)
+            except Exception:
+                pass  # Non-critical
+
+    # ------------------------------------------------------------------
     # Scanner
     # ------------------------------------------------------------------
 
@@ -546,8 +666,12 @@ class StrategyEngineProcess(multiprocessing.Process):
 
         # Pre-load historical candle data from DB for newly added symbols
         # so that indicators are available from the first evaluation.
+        # For grid strategy, also load 1h data for bias calculation.
+        tfs_to_load = [self._primary_tf] + self._secondary_tfs
+        if self._grid_strategy is not None and "1h" not in tfs_to_load:
+            tfs_to_load.append("1h")
         for sym in new_symbols:
-            for tf in [self._primary_tf] + self._secondary_tfs:
+            for tf in tfs_to_load:
                 self._load_history_from_api(sym, tf)
 
         logger.info(
@@ -631,8 +755,10 @@ class StrategyEngineProcess(multiprocessing.Process):
             df = pd.DataFrame([new_row])
 
         # Recalculate indicators
+        # For grid strategy, all 1h data needs trend indicators (EMA 20/50)
         is_trend = (
-            symbol in self._base_symbols and timeframe == self._trend_tf
+            (symbol in self._base_symbols and timeframe == self._trend_tf)
+            or (self._grid_strategy is not None and timeframe in ("1h", self._trend_tf))
         )
         try:
             df = IndicatorEngine.calculate_all(df, include_trend=is_trend)
@@ -775,3 +901,6 @@ class StrategyEngineProcess(multiprocessing.Process):
             "P2 loaded {} candles for {} {} via API",
             len(df), symbol, timeframe,
         )
+
+        # Throttle API calls to avoid rate limiting during bulk history load
+        time.sleep(0.2)

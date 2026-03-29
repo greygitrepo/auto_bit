@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-03-28T12:50:39.737258+09:00",
+  "equity": 19.9823,
+  "balance": 15.234,
+  "margin_locked": 4.7483,
+  "total_pnl": 0,
+  "total_fee": 0,
+  "net_pnl": 0,
+  "trade_count": 0,
+  "open_positions": 12,
+  "win_count": 0,
+  "loss_count": 0,
+  "win_rate": 0.0,
+  "profit_factor": 0.0,
+  "active_grids": 4,
+  "grid_info": [
+    {
+      "symbol": "SIRENUSDT",
+      "center": 1.0937,
+      "spacing_pct": 0.615,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ATHUSDT",
+      "center": 0.007195,
+      "spacing_pct": 0.659,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "QUSDT",
+      "center": 0.007914,
+      "spacing_pct": 0.615,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "TRIAUSDT",
+      "center": 0.02662,
+      "spacing_pct": 0.605,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "PENDING": 42
+  },
+  "symbol_stats": {},
+  "margin_match": true
+}

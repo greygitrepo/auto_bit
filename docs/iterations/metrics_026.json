@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-03-28T16:43:48.561449+09:00",
+  "equity": 20.0363,
+  "balance": 13.2477,
+  "margin_locked": 6.7886,
+  "total_pnl": 0.059463,
+  "total_fee": 0.050536,
+  "net_pnl": 0.059463,
+  "trade_count": 21,
+  "open_positions": 17,
+  "win_count": 21,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 594.63,
+  "active_grids": 5,
+  "grid_info": [
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3765,
+      "spacing_pct": 0.573,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PIPPINUSDT",
+      "center": 0.05475,
+      "spacing_pct": 0.57,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CUSDT",
+      "center": 0.08809,
+      "spacing_pct": 0.562,
+      "buy_levels": 7,
+      "sell_levels": 6,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17766,
+      "spacing_pct": 0.577,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "TRIAUSDT",
+      "center": 0.0273,
+      "spacing_pct": 0.55,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 6,
+    "PENDING": 43
+  },
+  "symbol_stats": {
+    "CYSUSDT": {
+      "trades": 3,
+      "pnl": 0.009524353715999951,
+      "wins": 3,
+      "fees": 0.007096878554916334
+    },
+    "TRIAUSDT": {
+      "trades": 7,
+      "pnl": 0.017574868592597572,
+      "wins": 7,
+      "fees": 0.016991442751725275
+    },
+    "PIPPINUSDT": {
+      "trades": 4,
+      "pnl": 0.011787894489314965,
+      "wins": 4,
+      "fees": 0.009668400031232876
+    },
+    "CUSDT": {
+      "trades": 5,
+      "pnl": 0.014196842162673654,
+      "wins": 5,
+      "fees": 0.012006695849587242
+    },
+    "KITEUSDT": {
+      "trades": 2,
+      "pnl": 0.0063786897877378705,
+      "wins": 2,
+      "fees": 0.00477228115620027
+    }
+  },
+  "margin_match": true
+}

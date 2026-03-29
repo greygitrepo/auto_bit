@@ -1,0 +1,133 @@
+{
+  "timestamp": "2026-03-28T15:13:06.195306+09:00",
+  "equity": 19.9159,
+  "balance": 13.5193,
+  "margin_locked": 6.3966,
+  "total_pnl": -0.066289,
+  "total_fee": 0.048109,
+  "net_pnl": -0.066289,
+  "trade_count": 20,
+  "open_positions": 16,
+  "win_count": 9,
+  "loss_count": 11,
+  "win_rate": 45.0,
+  "profit_factor": 0.29,
+  "active_grids": 9,
+  "grid_info": [
+    {
+      "symbol": "4USDT",
+      "center": 0.011521,
+      "spacing_pct": 0.574,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.0017049,
+      "spacing_pct": 0.556,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3744,
+      "spacing_pct": 0.577,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ATHUSDT",
+      "center": 0.007263,
+      "spacing_pct": 0.617,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17239,
+      "spacing_pct": 0.566,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PIPPINUSDT",
+      "center": 0.0566,
+      "spacing_pct": 0.553,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "RIVERUSDT",
+      "center": 13.71,
+      "spacing_pct": 0.557,
+      "buy_levels": 6,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CUSDT",
+      "center": 0.08766,
+      "spacing_pct": 0.57,
+      "buy_levels": 7,
+      "sell_levels": 6,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "B3USDT",
+      "center": 0.0003714,
+      "spacing_pct": 0.567,
+      "buy_levels": 7,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 10,
+    "PENDING": 81
+  },
+  "symbol_stats": {
+    "PTBUSDT": {
+      "trades": 7,
+      "pnl": -0.02567894231715378,
+      "wins": 3,
+      "fees": 0.017051582987009567
+    },
+    "KITEUSDT": {
+      "trades": 4,
+      "pnl": -0.022550284620620364,
+      "wins": 1,
+      "fees": 0.009674642344966298
+    },
+    "4USDT": {
+      "trades": 1,
+      "pnl": -0.008351798465410896,
+      "wins": 0,
+      "fees": 0.002386228132974568
+    },
+    "CYSUSDT": {
+      "trades": 4,
+      "pnl": 0.0014138426810884359,
+      "wins": 3,
+      "fees": 0.009496018857640223
+    },
+    "PIPPINUSDT": {
+      "trades": 2,
+      "pnl": 0.005522731050577916,
+      "wins": 2,
+      "fees": 0.004745374306589407
+    },
+    "ATHUSDT": {
+      "trades": 2,
+      "pnl": -0.016644459248244745,
+      "wins": 0,
+      "fees": 0.004755559785212722
+    }
+  },
+  "margin_match": true
+}

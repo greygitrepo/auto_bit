@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-03-28T15:01:05.587551+09:00",
+  "equity": 19.9862,
+  "balance": 12.4194,
+  "margin_locked": 7.5668,
+  "total_pnl": 0.011774,
+  "total_fee": 0.019206,
+  "net_pnl": 0.011774,
+  "trade_count": 8,
+  "open_positions": 19,
+  "win_count": 7,
+  "loss_count": 1,
+  "win_rate": 87.5,
+  "profit_factor": 2.41,
+  "active_grids": 6,
+  "grid_info": [
+    {
+      "symbol": "4USDT",
+      "center": 0.011521,
+      "spacing_pct": 0.574,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.001672,
+      "spacing_pct": 0.567,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3744,
+      "spacing_pct": 0.577,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ATHUSDT",
+      "center": 0.007263,
+      "spacing_pct": 0.617,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17239,
+      "spacing_pct": 0.566,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PIPPINUSDT",
+      "center": 0.0566,
+      "spacing_pct": 0.553,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 12,
+    "PENDING": 40
+  },
+  "symbol_stats": {
+    "PTBUSDT": {
+      "trades": 3,
+      "pnl": 0.008397083472320009,
+      "wins": 3,
+      "fees": 0.007315575618588517
+    },
+    "KITEUSDT": {
+      "trades": 1,
+      "pnl": 0.0029347522933538123,
+      "wins": 1,
+      "fees": 0.002393203226687975
+    },
+    "4USDT": {
+      "trades": 1,
+      "pnl": -0.008351798465410896,
+      "wins": 0,
+      "fees": 0.002386228132974568
+    },
+    "CYSUSDT": {
+      "trades": 1,
+      "pnl": 0.003271281072132898,
+      "wins": 1,
+      "fees": 0.00236533961910641
+    },
+    "PIPPINUSDT": {
+      "trades": 2,
+      "pnl": 0.005522731050577916,
+      "wins": 2,
+      "fees": 0.004745374306589407
+    }
+  },
+  "margin_match": true
+}

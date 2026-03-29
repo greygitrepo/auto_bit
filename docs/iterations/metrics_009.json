@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-03-28T13:27:51.284020+09:00",
+  "equity": 19.9926,
+  "balance": 15.5339,
+  "margin_locked": 4.4587,
+  "total_pnl": 0.001579,
+  "total_fee": 0.002406,
+  "net_pnl": 0.001579,
+  "trade_count": 1,
+  "open_positions": 11,
+  "win_count": 1,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 15.79,
+  "active_grids": 3,
+  "grid_info": [
+    {
+      "symbol": "SIRENUSDT",
+      "center": 1.43999,
+      "spacing_pct": 0.5,
+      "buy_levels": 8,
+      "sell_levels": 8,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.0017045,
+      "spacing_pct": 0.5,
+      "buy_levels": 8,
+      "sell_levels": 8,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ZROUSDT",
+      "center": 2.0148,
+      "spacing_pct": 0.555,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 1,
+    "PENDING": 35
+  },
+  "symbol_stats": {
+    "PTBUSDT": {
+      "trades": 1,
+      "pnl": 0.0015790089999997725,
+      "wins": 1,
+      "fees": 0.002405991
+    }
+  },
+  "margin_match": true
+}

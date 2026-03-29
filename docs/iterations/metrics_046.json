@@ -1,0 +1,137 @@
+{
+  "timestamp": "2026-03-29T01:54:29.824105+09:00",
+  "equity": 20.2169,
+  "balance": 6.9825,
+  "margin_locked": 13.2344,
+  "total_pnl": 0.257065,
+  "total_fee": 0.160226,
+  "net_pnl": 0.257065,
+  "trade_count": 67,
+  "open_positions": 33,
+  "win_count": 67,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 2570.65,
+  "active_grids": 8,
+  "grid_info": [
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17485,
+      "spacing_pct": 0.598,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "TRIAUSDT",
+      "center": 0.030291,
+      "spacing_pct": 0.559,
+      "buy_levels": 4,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CUSDT",
+      "center": 0.08128,
+      "spacing_pct": 0.559,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "B3USDT",
+      "center": 0.0003615,
+      "spacing_pct": 0.565,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "VVVUSDT",
+      "center": 6.192,
+      "spacing_pct": 0.597,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PIPPINUSDT",
+      "center": 0.05517,
+      "spacing_pct": 0.573,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CFGUSDT",
+      "center": 0.1555,
+      "spacing_pct": 0.551,
+      "buy_levels": 3,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ICNTUSDT",
+      "center": 0.4477,
+      "spacing_pct": 0.613,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 18,
+    "PENDING": 46
+  },
+  "symbol_stats": {
+    "VVVUSDT": {
+      "trades": 9,
+      "pnl": 0.03202462774528116,
+      "wins": 9,
+      "fees": 0.02154932260730071
+    },
+    "TRIAUSDT": {
+      "trades": 12,
+      "pnl": 0.07124353178768694,
+      "wins": 12,
+      "fees": 0.02879389325223372
+    },
+    "B3USDT": {
+      "trades": 10,
+      "pnl": 0.027849107241771212,
+      "wins": 10,
+      "fees": 0.023760120080336775
+    },
+    "PIPPINUSDT": {
+      "trades": 4,
+      "pnl": 0.010533796790831162,
+      "wins": 4,
+      "fees": 0.009733766107551963
+    },
+    "CFGUSDT": {
+      "trades": 6,
+      "pnl": 0.0161290876419673,
+      "wins": 6,
+      "fees": 0.014507164414342553
+    },
+    "KITEUSDT": {
+      "trades": 6,
+      "pnl": 0.037959743970048095,
+      "wins": 6,
+      "fees": 0.014317601097101822
+    },
+    "CUSDT": {
+      "trades": 16,
+      "pnl": 0.04562575200703706,
+      "wins": 16,
+      "fees": 0.03803785287362229
+    },
+    "ICNTUSDT": {
+      "trades": 4,
+      "pnl": 0.01569899012424177,
+      "wins": 4,
+      "fees": 0.0095263936441304
+    }
+  },
+  "margin_match": true
+}

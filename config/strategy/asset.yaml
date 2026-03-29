@@ -1,4 +1,4 @@
-active: fixed_ratio
+active: grid_sizing          # grid_sizing | fixed_ratio
 
 capital:
   mode: fixed
@@ -36,4 +36,4 @@ paper:
   fee_rate:
     maker: 0.0001
     taker: 0.0006
-  slippage_bps: 5
+  slippage_bps: 15              # 신규 상장 알트코인 현실적 슬리피지 (15 bps = 0.15%)

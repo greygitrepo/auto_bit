@@ -109,6 +109,48 @@ CREATE TABLE IF NOT EXISTS system_state (
     value       TEXT,
     updated_at  INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS grid_state (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    mode            TEXT    NOT NULL CHECK (mode IN ('paper', 'live')),
+    symbol          TEXT    NOT NULL,
+    status          TEXT    NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'paused', 'stopped')),
+    center_price    REAL    NOT NULL,
+    grid_range      REAL    NOT NULL,
+    grid_spacing    REAL    NOT NULL,
+    num_buy_levels  INTEGER NOT NULL,
+    num_sell_levels INTEGER NOT NULL,
+    bias            TEXT    NOT NULL DEFAULT 'NEUTRAL',
+    bias_magnitude  REAL    NOT NULL DEFAULT 0.0,
+    leverage        INTEGER NOT NULL DEFAULT 5,
+    qty_per_level   REAL    NOT NULL,
+    total_margin    REAL    NOT NULL DEFAULT 0.0,
+    realized_pnl    REAL    NOT NULL DEFAULT 0.0,
+    created_at      INTEGER NOT NULL,
+    updated_at      INTEGER NOT NULL,
+    UNIQUE (mode, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS grid_levels (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    grid_state_id   INTEGER NOT NULL REFERENCES grid_state(id),
+    level_index     INTEGER NOT NULL,
+    price           REAL    NOT NULL,
+    side            TEXT    NOT NULL CHECK (side IN ('Buy', 'Sell')),
+    status          TEXT    NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING', 'FILLED', 'TP_SET', 'COMPLETED', 'CANCELLED')),
+    tp_price        REAL,
+    fill_price      REAL,
+    fill_time       INTEGER,
+    tp_fill_price   REAL,
+    tp_fill_time    INTEGER,
+    pnl             REAL    DEFAULT 0.0,
+    fee             REAL    DEFAULT 0.0,
+    position_id     INTEGER,
+    created_at      INTEGER NOT NULL,
+    updated_at      INTEGER NOT NULL
+);
 """
 
 # ── Index DDL (created once alongside tables) ─────────────────────────────
@@ -122,6 +164,12 @@ CREATE INDEX IF NOT EXISTS idx_trades_mode
 
 CREATE INDEX IF NOT EXISTS idx_positions_mode
     ON positions (mode);
+
+CREATE INDEX IF NOT EXISTS idx_grid_levels_state
+    ON grid_levels (grid_state_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_grid_state_mode
+    ON grid_state (mode, symbol);
 """
 
 
@@ -422,6 +470,131 @@ class DatabaseManager:
         )
         row = cur.fetchone()
         return row["value"] if row else None
+
+    # ── grid state ───────────────────────────────────────────────────────
+
+    def upsert_grid_state(self, **kwargs: Any) -> int:
+        """Insert or update a grid_state row. Returns the row id."""
+        mode = kwargs.get("mode", "paper")
+        symbol = kwargs.get("symbol", "")
+        conn = self._get_connection()
+        # Check if exists
+        cur = conn.execute(
+            "SELECT id FROM grid_state WHERE mode = ? AND symbol = ?",
+            (mode, symbol),
+        )
+        row = cur.fetchone()
+        if row:
+            grid_id = row["id"]
+            update_cols = {k: v for k, v in kwargs.items() if k not in ("id",)}
+            set_clause = ", ".join(f"{k} = ?" for k in update_cols)
+            conn.execute(
+                f"UPDATE grid_state SET {set_clause} WHERE id = ?",
+                (*update_cols.values(), grid_id),
+            )
+            conn.commit()
+            return grid_id
+        else:
+            cols = ", ".join(kwargs.keys())
+            placeholders = ", ".join(["?"] * len(kwargs))
+            cur = conn.execute(
+                f"INSERT INTO grid_state ({cols}) VALUES ({placeholders})",
+                tuple(kwargs.values()),
+            )
+            conn.commit()
+            return cur.lastrowid  # type: ignore[return-value]
+
+    def get_grid_state(self, mode: str, symbol: str) -> Optional[sqlite3.Row]:
+        """Return the grid_state row for a symbol, or None."""
+        conn = self._get_connection()
+        cur = conn.execute(
+            "SELECT * FROM grid_state WHERE mode = ? AND symbol = ?",
+            (mode, symbol),
+        )
+        return cur.fetchone()
+
+    def get_all_grid_states(self, mode: str) -> list[sqlite3.Row]:
+        """Return all active grid states for a mode."""
+        conn = self._get_connection()
+        cur = conn.execute(
+            "SELECT * FROM grid_state WHERE mode = ? AND status = 'active'",
+            (mode,),
+        )
+        return cur.fetchall()
+
+    def delete_grid_state(self, grid_state_id: int) -> None:
+        """Delete a grid_state and all its levels."""
+        conn = self._get_connection()
+        conn.execute("DELETE FROM grid_levels WHERE grid_state_id = ?", (grid_state_id,))
+        conn.execute("DELETE FROM grid_state WHERE id = ?", (grid_state_id,))
+        conn.commit()
+
+    # ── grid levels ────────────────────────────────────────────────────
+
+    def insert_grid_level(self, **kwargs: Any) -> int:
+        """Insert a grid level row and return its id."""
+        cols = ", ".join(kwargs.keys())
+        placeholders = ", ".join(["?"] * len(kwargs))
+        conn = self._get_connection()
+        cur = conn.execute(
+            f"INSERT INTO grid_levels ({cols}) VALUES ({placeholders})",
+            tuple(kwargs.values()),
+        )
+        conn.commit()
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def insert_grid_levels_bulk(self, rows: list[dict[str, Any]]) -> int:
+        """Bulk insert grid levels. Returns count inserted."""
+        if not rows:
+            return 0
+        cols = list(rows[0].keys())
+        col_str = ", ".join(cols)
+        placeholders = ", ".join(["?"] * len(cols))
+        conn = self._get_connection()
+        conn.executemany(
+            f"INSERT INTO grid_levels ({col_str}) VALUES ({placeholders})",
+            [tuple(r[c] for c in cols) for r in rows],
+        )
+        conn.commit()
+        return len(rows)
+
+    def update_grid_level(self, level_id: int, **kwargs: Any) -> None:
+        """Update fields on a grid level."""
+        if not kwargs:
+            return
+        set_clause = ", ".join(f"{k} = ?" for k in kwargs)
+        conn = self._get_connection()
+        conn.execute(
+            f"UPDATE grid_levels SET {set_clause} WHERE id = ?",
+            (*kwargs.values(), level_id),
+        )
+        conn.commit()
+
+    def get_grid_levels(self, grid_state_id: int) -> list[sqlite3.Row]:
+        """Return all levels for a grid_state, ordered by level_index."""
+        conn = self._get_connection()
+        cur = conn.execute(
+            "SELECT * FROM grid_levels WHERE grid_state_id = ? ORDER BY level_index",
+            (grid_state_id,),
+        )
+        return cur.fetchall()
+
+    def get_active_grid_levels(self, grid_state_id: int) -> list[sqlite3.Row]:
+        """Return non-cancelled levels for a grid_state."""
+        conn = self._get_connection()
+        cur = conn.execute(
+            """SELECT * FROM grid_levels
+            WHERE grid_state_id = ? AND status != 'CANCELLED'
+            ORDER BY level_index""",
+            (grid_state_id,),
+        )
+        return cur.fetchall()
+
+    def delete_grid_levels(self, grid_state_id: int) -> None:
+        """Delete all levels for a grid_state."""
+        conn = self._get_connection()
+        conn.execute("DELETE FROM grid_levels WHERE grid_state_id = ?", (grid_state_id,))
+        conn.commit()
 
     # ── dunder helpers ────────────────────────────────────────────────────
 

@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-03-28T14:00:19.531199+09:00",
+  "equity": 19.9805,
+  "balance": 17.9787,
+  "margin_locked": 2.0018,
+  "total_pnl": -0.014074,
+  "total_fee": 0.007167,
+  "net_pnl": -0.014074,
+  "trade_count": 3,
+  "open_positions": 5,
+  "win_count": 1,
+  "loss_count": 2,
+  "win_rate": 33.3,
+  "profit_factor": 0.16,
+  "active_grids": 4,
+  "grid_info": [
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3747,
+      "spacing_pct": 0.566,
+      "buy_levels": 4,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "OPNUSDT",
+      "center": 0.1915,
+      "spacing_pct": 0.55,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ROBOUSDT",
+      "center": 0.02317,
+      "spacing_pct": 0.557,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17568,
+      "spacing_pct": 0.59,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 5,
+    "PENDING": 15
+  },
+  "symbol_stats": {
+    "CYSUSDT": {
+      "trades": 2,
+      "pnl": -0.0166603486281684,
+      "wins": 0,
+      "fees": 0.004760099608048079
+    },
+    "OPNUSDT": {
+      "trades": 1,
+      "pnl": 0.002586844094651441,
+      "wins": 1,
+      "fees": 0.0024065960640952486
+    }
+  },
+  "margin_match": true
+}

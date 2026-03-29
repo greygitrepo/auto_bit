@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-03-28T14:31:05.527803+09:00",
+  "equity": 19.9915,
+  "balance": 16.0079,
+  "margin_locked": 3.9836,
+  "total_pnl": 0.00575,
+  "total_fee": 0.004827,
+  "net_pnl": 0.00575,
+  "trade_count": 2,
+  "open_positions": 10,
+  "win_count": 2,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 57.5,
+  "active_grids": 5,
+  "grid_info": [
+    {
+      "symbol": "4USDT",
+      "center": 0.011521,
+      "spacing_pct": 0.574,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.001672,
+      "spacing_pct": 0.567,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3744,
+      "spacing_pct": 0.577,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ATHUSDT",
+      "center": 0.007263,
+      "spacing_pct": 0.617,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17239,
+      "spacing_pct": 0.566,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 7,
+    "PENDING": 32
+  },
+  "symbol_stats": {
+    "PTBUSDT": {
+      "trades": 1,
+      "pnl": 0.002814855427738989,
+      "wins": 1,
+      "fees": 0.002433991641638756
+    },
+    "KITEUSDT": {
+      "trades": 1,
+      "pnl": 0.0029347522933538123,
+      "wins": 1,
+      "fees": 0.002393203226687975
+    }
+  },
+  "margin_match": true
+}

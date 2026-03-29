@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-03-28T12:39:19.233825+09:00",
+  "equity": 19.9943,
+  "balance": 15.9697,
+  "margin_locked": 4.0246,
+  "total_pnl": 0.003882,
+  "total_fee": 0.002407,
+  "net_pnl": 0.003882,
+  "trade_count": 1,
+  "open_positions": 10,
+  "win_count": 1,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 38.82,
+  "active_grids": 3,
+  "grid_info": [
+    {
+      "symbol": "BRUSDT",
+      "center": 0.12407,
+      "spacing_pct": 0.615,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "SIRENUSDT",
+      "center": 1.08425,
+      "spacing_pct": 0.615,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.0017098,
+      "spacing_pct": 0.615,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 1,
+    "PENDING": 38
+  },
+  "symbol_stats": {
+    "BRUSDT": {
+      "trades": 1,
+      "pnl": 0.0038818573545084745,
+      "wins": 1,
+      "fees": 0.002407373538535826
+    }
+  },
+  "margin_match": true
+}

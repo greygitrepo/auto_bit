@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 
 from src.collector.bybit_client import BybitClient
+from src.order.grid_manager import GridPositionManager
 from src.order.live_executor import LiveExecutor
 from src.order.order_manager import OrderManager
 from src.order.paper_executor import PaperExecutor
@@ -28,6 +29,7 @@ from src.strategy.asset.fixed_ratio import (
     DrawdownManager,
     FixedRatioStrategy,
 )
+from src.strategy.asset.grid_sizing import GridSizingStrategy
 from src.strategy.position.base import PositionSignal, SignalType, TrailingStopState
 from src.strategy.position.momentum_scalper import TimeLimitManager, TrailingStopManager
 from src.tracker.position_tracker import PositionTracker
@@ -35,6 +37,7 @@ from src.utils.db import DatabaseManager
 from src.utils.logger import setup_logger
 from src.utils.messages import (
     ControlMessage,
+    GridSignalMessage,
     PositionUpdateMessage,
     SignalMessage,
     SlotAvailableMessage,
@@ -129,6 +132,21 @@ class OrderManagerProcess(multiprocessing.Process):
         # 3. Create asset strategy and risk managers
         self._asset_strategy = FixedRatioStrategy(asset_config)
 
+        # 3b. Create grid position manager if grid strategy is active
+        grid_config = self.config.get("grid", {})
+        self._strategy_mode = grid_config.get("active", "") if grid_config else ""
+        self._grid_manager: Optional[GridPositionManager] = None
+        if self._strategy_mode == "grid_bias":
+            grid_sizing = GridSizingStrategy(grid_config)
+            self._grid_manager = GridPositionManager(
+                executor=executor,
+                position_tracker=self._position_tracker,
+                sizing=grid_sizing,
+                mode=mode,
+                initial_balance=initial_balance,
+            )
+            logger.info("P3 grid position manager initialized")
+
         # 4. State
         self._mode = mode
         self._executor = executor
@@ -203,9 +221,17 @@ class OrderManagerProcess(multiprocessing.Process):
             # b. Check signal queue for new signals
             await self._drain_signal_queue()
 
-            # c. Monitor positions periodically
-            if now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
+            # c. Monitor positions periodically (skip for grid strategy —
+            #    grid TP/SL is handled by GridEngine in P2, not by P3 monitor)
+            if self._grid_manager is None and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
                 await self._monitor_positions()
+                last_monitor_time = now
+
+            # c2. For grid mode: still sync balance to DB periodically
+            if self._grid_manager is not None and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
+                if self._mode == "paper" and isinstance(self._executor, PaperExecutor):
+                    self._db.set_state("current_balance_paper", str(round(self._executor.account.balance, 4)))
+                    self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
                 last_monitor_time = now
 
             # d. Send position updates to P2 periodically
@@ -248,17 +274,23 @@ class OrderManagerProcess(multiprocessing.Process):
     async def _drain_signal_queue(self) -> None:
         """Process all pending signal messages.
 
+        Handles both legacy SignalMessages and GridSignalMessages.
         CLOSE signals are processed immediately (time-sensitive).
         LONG/SHORT signals are batched and sorted by confidence descending
         so that the highest-quality signals fill limited position slots first.
         """
         entry_signals: list[SignalMessage] = []
+        grid_signals: list[GridSignalMessage] = []
 
         while True:
             try:
                 msg = self.signal_queue.get_nowait()
             except queue.Empty:
                 break
+
+            if isinstance(msg, GridSignalMessage):
+                grid_signals.append(msg)
+                continue
 
             if not isinstance(msg, SignalMessage):
                 logger.warning("P3 ignoring non-SignalMessage: {}", type(msg).__name__)
@@ -269,6 +301,29 @@ class OrderManagerProcess(multiprocessing.Process):
                 await self._handle_signal(msg)
             else:
                 entry_signals.append(msg)
+
+        # Process grid signals
+        if grid_signals and self._grid_manager is not None:
+            current_balance = self._get_current_balance()
+            open_positions = self._position_tracker.get_open_positions()
+            daily_stats = self._position_tracker.get_daily_stats()
+
+            for gmsg in grid_signals:
+                try:
+                    update = await self._grid_manager.handle_grid_signal(
+                        gmsg, current_balance, open_positions, daily_stats,
+                    )
+                    if update is not None:
+                        logger.info(
+                            "P3 grid {} result: {} {} level={} pnl={:.6f}",
+                            gmsg.action, update.action, gmsg.symbol,
+                            gmsg.level_index, update.pnl,
+                        )
+                        # Notify slot available on closes
+                        if update.action == "CLOSED":
+                            self._notify_slot_available()
+                except Exception as exc:
+                    logger.error("P3 grid signal error: {}", exc)
 
         # Sort entry signals by confidence (highest first)
         if entry_signals:

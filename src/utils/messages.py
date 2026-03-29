@@ -97,3 +97,45 @@ class ScanResultMessage:
     market_direction: str  # bull | bear | mixed
     timestamp: float = field(default_factory=time.time)
     msg_type: str = field(default="scan_result", init=False)
+
+
+@dataclass
+class GridSignalMessage:
+    """Grid trading signal from P2 to P3.
+
+    Carries a single grid action (fill, TP hit, recenter, close_all)
+    for one level of one symbol's grid.
+    """
+
+    symbol: str
+    action: str         # FILL | TP_HIT | RECENTER | CLOSE_ALL
+    level_id: int = 0
+    level_index: int = 0
+    level_price: float = 0.0
+    side: str = ""      # Buy | Sell
+    tp_price: float = 0.0
+    grid_state_id: int = 0
+    qty_per_level: float = 0.0
+    leverage: int = 1
+    reason: str = ""
+    timestamp: float = field(default_factory=time.time)
+    msg_type: str = field(default="grid_signal", init=False)
+
+
+@dataclass
+class GridUpdateMessage:
+    """Grid state feedback from P3 to P2.
+
+    Confirms position opens/closes so P2 can update level states.
+    """
+
+    symbol: str
+    level_id: int
+    action: str         # CONFIRMED | CLOSED | FAILED
+    position_id: int = 0
+    fill_price: float = 0.0
+    pnl: float = 0.0
+    fee: float = 0.0
+    reason: str = ""
+    timestamp: float = field(default_factory=time.time)
+    msg_type: str = field(default="grid_update", init=False)

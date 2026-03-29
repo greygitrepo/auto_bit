@@ -200,6 +200,8 @@ class PaperExecutor:
         self.account.fees_paid += fee
 
         # Create position.
+        # Use composite key if a position already exists for this symbol
+        # (supports multiple grid micro-positions per symbol).
         order_id = self._gen_order_id()
         position = PaperPosition(
             symbol=symbol,
@@ -213,7 +215,9 @@ class PaperExecutor:
             sl_order_id="",
             tp_order_id="",
         )
-        self.account.positions[symbol] = position
+        # Always use order_id as key to support multiple positions per symbol
+        pos_key = order_id
+        self.account.positions[pos_key] = position
 
         logger.info(
             "Paper FILL: {} {} {:.6f} {} @ {:.4f} (slippage from {:.4f}) | "
@@ -340,7 +344,9 @@ class PaperExecutor:
             self.last_prices[candle_symbol] = close
 
         # Iterate over a snapshot since we may mutate during iteration.
-        for symbol, pos in list(self.account.positions.items()):
+        # Keys may be order_ids (grid) or symbols (legacy).
+        for pos_key, pos in list(self.account.positions.items()):
+            symbol = pos.symbol  # Always use pos.symbol for matching
             if pos.sl_price <= 0 and pos.tp_price <= 0:
                 continue
 
@@ -427,7 +433,7 @@ class PaperExecutor:
             fills.append(fill_info)
 
             # Clean up: remove position and its pending orders.
-            self.account.positions.pop(symbol, None)
+            self.account.positions.pop(pos_key, None)
             self.account.pending_orders.pop(pos.sl_order_id, None)
             self.account.pending_orders.pop(pos.tp_order_id, None)
 
@@ -460,7 +466,16 @@ class PaperExecutor:
         notional = fill_price * qty
         fee = self._calculate_fee(notional)
 
+        # Find position by key: try exact symbol, then order_id keys
         pos = self.account.positions.get(symbol)
+        pos_key = symbol
+        if pos is None:
+            # Search by symbol match in position objects (order_id keyed)
+            for k, v in list(self.account.positions.items()):
+                if v.symbol == symbol:
+                    pos = v
+                    pos_key = k
+                    break
         if pos is not None:
             raw_pnl = self._calculate_pnl(
                 pos.side, pos.entry_price, fill_price, pos.qty
@@ -502,7 +517,7 @@ class PaperExecutor:
             # Remove position and pending SL/TP orders.
             self.account.pending_orders.pop(pos.sl_order_id, None)
             self.account.pending_orders.pop(pos.tp_order_id, None)
-            self.account.positions.pop(symbol, None)
+            self.account.positions.pop(pos_key, None)
 
             return {
                 "orderId": self._gen_order_id(),
@@ -528,6 +543,54 @@ class PaperExecutor:
             "fee": fee,
             "side": close_side,
             "qty": qty,
+        }
+
+    async def close_position_by_key(
+        self, pos_key: str, current_price: float
+    ) -> dict:
+        """Close a specific position by its executor key (orderId).
+
+        Used by grid_manager to close the exact micro-position.
+        """
+        pos = self.account.positions.get(pos_key)
+        if pos is None:
+            logger.warning("Paper CLOSE by key: no position for key={}", pos_key)
+            return {"orderId": "", "fillPrice": current_price, "pnl": 0.0, "fee": 0.0, "side": "", "qty": 0}
+
+        close_side = "Sell" if pos.side == "Buy" else "Buy"
+        fill_price = self._apply_slippage(current_price, close_side)
+        raw_pnl = self._calculate_pnl(pos.side, pos.entry_price, fill_price, pos.qty)
+        notional = fill_price * pos.qty
+        fee = self._calculate_fee(notional)
+        net_pnl = raw_pnl - fee
+
+        self.account.balance += pos.margin + net_pnl
+        self.account.fees_paid += fee
+
+        trade = PaperTrade(
+            symbol=pos.symbol, side=pos.side, qty=pos.qty,
+            entry_price=pos.entry_price, exit_price=fill_price,
+            pnl=net_pnl, fee=fee, leverage=pos.leverage,
+            exit_type="market", entered_at=pos.entered_at, exited_at=time.time(),
+        )
+        self.account.trades.append(trade)
+
+        logger.info(
+            "Paper CLOSE by key: {} {} @ {:.4f} | pnl={:.4f} fee={:.4f} balance={:.2f}",
+            pos.side, pos.symbol, fill_price, net_pnl, fee, self.account.balance,
+        )
+
+        self.account.pending_orders.pop(pos.sl_order_id, None)
+        self.account.pending_orders.pop(pos.tp_order_id, None)
+        self.account.positions.pop(pos_key, None)
+
+        return {
+            "orderId": self._gen_order_id(),
+            "fillPrice": fill_price,
+            "pnl": net_pnl,
+            "fee": fee,
+            "side": close_side,
+            "qty": pos.qty,
         }
 
     async def cancel_orders(self, symbol: str, order_ids: list) -> None:
@@ -557,6 +620,12 @@ class PaperExecutor:
         Dict representation of the position, or ``None`` if no position.
         """
         pos = self.account.positions.get(symbol)
+        if pos is None:
+            # Search by symbol match in position objects (order_id keyed)
+            for k, v in self.account.positions.items():
+                if v.symbol == symbol:
+                    pos = v
+                    break
         if pos is None:
             return None
 

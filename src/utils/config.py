@@ -140,6 +140,7 @@ class StrategySection:
     scanner: Dict[str, Any] = field(default_factory=dict)
     position: Dict[str, Any] = field(default_factory=dict)
     asset: Dict[str, Any] = field(default_factory=dict)
+    grid: Dict[str, Any] = field(default_factory=dict)
 
 
 # ── YAML helpers ───────────────────────────────────────────────────────────
@@ -333,6 +334,7 @@ class AppConfig:
         scanner_raw = _load_yaml(strategy_dir / "scanner.yaml")
         position_raw = _load_yaml(strategy_dir / "position.yaml")
         asset_raw = _load_yaml(strategy_dir / "asset.yaml")
+        grid_raw = _load_yaml_optional(strategy_dir / "grid.yaml")
 
         # 5. Validate required fields
         _validate_required(app_raw, _REQUIRED_APP_FIELDS, "app.yaml")
@@ -346,6 +348,7 @@ class AppConfig:
             scanner=scanner_raw,
             position=position_raw,
             asset=asset_raw,
+            grid=grid_raw,
         )
 
         # 7. Credential validation (warn or raise)
@@ -359,6 +362,7 @@ class AppConfig:
             "scanner": scanner_raw,
             "position": position_raw,
             "asset": asset_raw,
+            "grid": grid_raw,
         }
 
         logger.info(

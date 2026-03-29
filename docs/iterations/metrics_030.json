@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-03-28T18:29:11.262530+09:00",
+  "equity": 19.9884,
+  "balance": 15.9999,
+  "margin_locked": 3.9885,
+  "total_pnl": 0.002805,
+  "total_fee": 0.002407,
+  "net_pnl": 0.002805,
+  "trade_count": 1,
+  "open_positions": 10,
+  "win_count": 1,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 28.05,
+  "active_grids": 5,
+  "grid_info": [
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.0019093,
+      "spacing_pct": 0.554,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "KATUSDT",
+      "center": 0.0117,
+      "spacing_pct": 0.558,
+      "buy_levels": 3,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "BEATUSDT",
+      "center": 0.51834,
+      "spacing_pct": 0.561,
+      "buy_levels": 4,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "MUSDT",
+      "center": 2.2081,
+      "spacing_pct": 0.587,
+      "buy_levels": 3,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CFGUSDT",
+      "center": 0.1528,
+      "spacing_pct": 0.567,
+      "buy_levels": 3,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 2,
+    "PENDING": 36
+  },
+  "symbol_stats": {
+    "BEATUSDT": {
+      "trades": 1,
+      "pnl": 0.0028046347588541864,
+      "wins": 1,
+      "fees": 0.0024067268169454797
+    }
+  },
+  "margin_match": true
+}

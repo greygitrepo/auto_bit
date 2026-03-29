@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-03-28T17:37:08.392583+09:00",
+  "equity": 19.9838,
+  "balance": 11.5502,
+  "margin_locked": 8.4336,
+  "total_pnl": 0.005851,
+  "total_fee": 0.004854,
+  "net_pnl": 0.005851,
+  "trade_count": 2,
+  "open_positions": 21,
+  "win_count": 2,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 58.51,
+  "active_grids": 5,
+  "grid_info": [
+    {
+      "symbol": "BANANAS31USDT",
+      "center": 0.012404,
+      "spacing_pct": 0.585,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "4USDT",
+      "center": 0.012036,
+      "spacing_pct": 0.572,
+      "buy_levels": 5,
+      "sell_levels": 6,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.001794,
+      "spacing_pct": 0.557,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.1748,
+      "spacing_pct": 0.569,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ATHUSDT",
+      "center": 0.007073,
+      "spacing_pct": 0.591,
+      "buy_levels": 2,
+      "sell_levels": 2,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 7,
+    "PENDING": 27
+  },
+  "symbol_stats": {
+    "PTBUSDT": {
+      "trades": 1,
+      "pnl": 0.0026274741103008504,
+      "wins": 1,
+      "fees": 0.0024334235485618727
+    },
+    "BANANAS31USDT": {
+      "trades": 1,
+      "pnl": 0.003223336410901144,
+      "wins": 1,
+      "fees": 0.0024210441034488873
+    }
+  },
+  "margin_match": true
+}

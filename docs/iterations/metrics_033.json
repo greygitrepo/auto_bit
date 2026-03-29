@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-03-28T19:51:12.318246+09:00",
+  "equity": 19.9478,
+  "balance": 5.2917,
+  "margin_locked": 14.6561,
+  "total_pnl": 0.002842,
+  "total_fee": 0.002393,
+  "net_pnl": 0.002842,
+  "trade_count": 1,
+  "open_positions": 37,
+  "win_count": 1,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 28.42,
+  "active_grids": 8,
+  "grid_info": [
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.0021999,
+      "spacing_pct": 0.57,
+      "buy_levels": 7,
+      "sell_levels": 5,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "RIVERUSDT",
+      "center": 14.137,
+      "spacing_pct": 0.557,
+      "buy_levels": 7,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "B3USDT",
+      "center": 0.0003445,
+      "spacing_pct": 0.558,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ARIAUSDT",
+      "center": 0.318,
+      "spacing_pct": 0.575,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "BEATUSDT",
+      "center": 0.50347,
+      "spacing_pct": 0.554,
+      "buy_levels": 4,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "MUSDT",
+      "center": 2.211,
+      "spacing_pct": 0.561,
+      "buy_levels": 3,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "GUNUSDT",
+      "center": 0.016266,
+      "spacing_pct": 0.551,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17151,
+      "spacing_pct": 0.574,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 17,
+    "PENDING": 57
+  },
+  "symbol_stats": {
+    "MUSDT": {
+      "trades": 1,
+      "pnl": 0.002841990945037468,
+      "wins": 1,
+      "fees": 0.0023932588501229036
+    }
+  },
+  "margin_match": true
+}

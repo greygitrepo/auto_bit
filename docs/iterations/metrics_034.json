@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-03-28T20:21:12.420061+09:00",
+  "equity": 19.9933,
+  "balance": 6.474,
+  "margin_locked": 13.5193,
+  "total_pnl": 0.037165,
+  "total_fee": 0.030943,
+  "net_pnl": 0.037165,
+  "trade_count": 13,
+  "open_positions": 34,
+  "win_count": 13,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 371.65,
+  "active_grids": 8,
+  "grid_info": [
+    {
+      "symbol": "PTBUSDT",
+      "center": 0.002393,
+      "spacing_pct": 0.571,
+      "buy_levels": 6,
+      "sell_levels": 5,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "RIVERUSDT",
+      "center": 14.922,
+      "spacing_pct": 0.568,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "B3USDT",
+      "center": 0.0003445,
+      "spacing_pct": 0.558,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "ARIAUSDT",
+      "center": 0.318,
+      "spacing_pct": 0.575,
+      "buy_levels": 5,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "BEATUSDT",
+      "center": 0.48697,
+      "spacing_pct": 0.573,
+      "buy_levels": 4,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "MUSDT",
+      "center": 2.211,
+      "spacing_pct": 0.561,
+      "buy_levels": 3,
+      "sell_levels": 4,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "GUNUSDT",
+      "center": 0.016266,
+      "spacing_pct": 0.551,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17151,
+      "spacing_pct": 0.574,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 14,
+    "PENDING": 65
+  },
+  "symbol_stats": {
+    "MUSDT": {
+      "trades": 4,
+      "pnl": 0.011509315899389905,
+      "wins": 4,
+      "fees": 0.009532649080708711
+    },
+    "RIVERUSDT": {
+      "trades": 5,
+      "pnl": 0.014465470163265616,
+      "wins": 5,
+      "fees": 0.011842436856551525
+    },
+    "GUNUSDT": {
+      "trades": 2,
+      "pnl": 0.005319818347855776,
+      "wins": 2,
+      "fees": 0.004773547427381041
+    },
+    "B3USDT": {
+      "trades": 1,
+      "pnl": 0.0025917382678843923,
+      "wins": 1,
+      "fees": 0.002442399375838256
+    },
+    "ARIAUSDT": {
+      "trades": 1,
+      "pnl": 0.003278372626561605,
+      "wins": 1,
+      "fees": 0.00235165109608
+    }
+  },
+  "margin_match": true
+}

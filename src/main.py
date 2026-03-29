@@ -71,6 +71,7 @@ class Orchestrator:
             "asset": self.config.strategy.asset,
             "position": self.config.strategy.position,
             "scanner": self.config.strategy.scanner,
+            "grid": self.config.strategy.grid,
             "symbols": {
                 "base_symbols": self.config.symbols.base_symbols,
                 "blacklist": self.config.symbols.blacklist,
@@ -112,6 +113,9 @@ class Orchestrator:
         self._shutdown_requested = False
         self._last_health_check = 0.0
         self._process_restart_times: Dict[str, float] = {}
+
+        # Cached DB instance for the watchdog loop (avoids re-creating every second)
+        self._watchdog_db: Optional[DatabaseManager] = None
 
         logger.info(
             "Orchestrator initialised: mode={}, headless={}",
@@ -360,15 +364,13 @@ class Orchestrator:
     def _check_restart_request(self) -> None:
         """Check if a restart was requested via DB flag (e.g. from GUI reset)."""
         try:
-            db = DatabaseManager()
+            db = self._get_watchdog_db()
             flag = db.get_state("restart_requested")
             if flag == "1":
                 db.set_state("restart_requested", "0")
-                db.close()
                 logger.info("Restart requested — restarting P1, P2, P3...")
                 self._restart_trading_processes()
                 return
-            db.close()
         except Exception:
             pass
 
@@ -400,6 +402,7 @@ class Orchestrator:
             "asset": self.config.strategy.asset,
             "position": self.config.strategy.position,
             "scanner": self.config.strategy.scanner,
+            "grid": self.config.strategy.grid,
             "symbols": {
                 "base_symbols": self.config.symbols.base_symbols,
                 "blacklist": self.config.symbols.blacklist,
@@ -652,13 +655,18 @@ class Orchestrator:
     # Helpers
     # ------------------------------------------------------------------
 
+    def _get_watchdog_db(self) -> DatabaseManager:
+        """Return a cached DatabaseManager for watchdog-loop use."""
+        if self._watchdog_db is None:
+            self._watchdog_db = DatabaseManager()
+        return self._watchdog_db
+
     def _send_initial_scan_trigger(self) -> None:
         """Send an initial scan trigger to P2 if trading slots are available."""
         try:
-            db = DatabaseManager()
+            db = self._get_watchdog_db()
             open_positions = db.get_open_positions(self._mode)
             open_count = len(open_positions)
-            db.close()
         except Exception:
             open_count = 0
 
@@ -732,7 +740,7 @@ class Orchestrator:
         all_alive = True
 
         try:
-            db = DatabaseManager()
+            db = self._get_watchdog_db()
         except Exception:
             db = None
 
@@ -761,8 +769,6 @@ class Orchestrator:
                 db.set_state("last_health_check", str(int(time.time())))
             except Exception:
                 pass
-            finally:
-                db.close()
 
         logger.info("Health check: {}", " | ".join(statuses))
 

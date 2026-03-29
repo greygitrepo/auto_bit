@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-03-28T16:13:48.460156+09:00",
+  "equity": 20.0059,
+  "balance": 11.5954,
+  "margin_locked": 8.4105,
+  "total_pnl": 0.03045,
+  "total_fee": 0.026566,
+  "net_pnl": 0.03045,
+  "trade_count": 11,
+  "open_positions": 21,
+  "win_count": 11,
+  "loss_count": 0,
+  "win_rate": 100.0,
+  "profit_factor": 304.5,
+  "active_grids": 5,
+  "grid_info": [
+    {
+      "symbol": "CYSUSDT",
+      "center": 0.3765,
+      "spacing_pct": 0.573,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "PIPPINUSDT",
+      "center": 0.05475,
+      "spacing_pct": 0.57,
+      "buy_levels": 6,
+      "sell_levels": 7,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "CUSDT",
+      "center": 0.08809,
+      "spacing_pct": 0.562,
+      "buy_levels": 7,
+      "sell_levels": 6,
+      "bias": "BULLISH"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "center": 0.17766,
+      "spacing_pct": 0.577,
+      "buy_levels": 2,
+      "sell_levels": 3,
+      "bias": "NEUTRAL"
+    },
+    {
+      "symbol": "TRIAUSDT",
+      "center": 0.0273,
+      "spacing_pct": 0.55,
+      "buy_levels": 4,
+      "sell_levels": 5,
+      "bias": "NEUTRAL"
+    }
+  ],
+  "level_status": {
+    "FILLED": 8,
+    "PENDING": 41
+  },
+  "symbol_stats": {
+    "CYSUSDT": {
+      "trades": 1,
+      "pnl": 0.0030785667552668825,
+      "wins": 1,
+      "fees": 0.0023931169897529877
+    },
+    "TRIAUSDT": {
+      "trades": 4,
+      "pnl": 0.009963534621724147,
+      "wins": 4,
+      "fees": 0.009732037682305494
+    },
+    "PIPPINUSDT": {
+      "trades": 3,
+      "pnl": 0.008804989291643684,
+      "wins": 3,
+      "fees": 0.007261566187808219
+    },
+    "CUSDT": {
+      "trades": 3,
+      "pnl": 0.008603110092472617,
+      "wins": 3,
+      "fees": 0.007179730295767057
+    }
+  },
+  "margin_match": true
+}

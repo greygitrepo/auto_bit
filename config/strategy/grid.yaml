@@ -1,0 +1,71 @@
+active: grid_bias
+
+strategies:
+  grid_bias:
+    # Grid structure
+    num_levels: 10              # 총 그리드 레벨 수 (바이어스에 의해 매수/매도 분배)
+    default_buy_levels: 5       # 센터 아래 매수 레벨 (중립 바이어스 시)
+    default_sell_levels: 5      # 센터 위 매도 레벨
+
+    # Grid range sizing
+    range_atr_multiplier: 1.2   # 그리드 범위 = 1h ATR(14) × 이 값 (1.0→1.2: 리센터 과다 방지)
+    min_range_pct: 0.8          # 최소 그리드 범위 (센터 가격 대비 %) (1.0→0.8: 타이트 그리드 허용)
+    max_range_pct: 8.0          # 최대 그리드 범위
+
+    # Center price
+    center_method: last_close   # last_close | vwap | mid_range (vwap는 과거 평균이라 현재가와 괴리 발생)
+
+    # Recalculation
+    recenter_interval_minutes: 180  # 그리드 센터 재계산 주기 (60→180: 리센터 손실 최소화)
+    recenter_threshold_pct: 3.0     # 가격이 센터에서 이만큼 벗어나면 즉시 리센터 (2.0→3.0: 리센터 손실 방지)
+
+    # Directional bias
+    bias:
+      enabled: true
+      max_level_shift: 3          # 바이어스 방향으로 최대 레벨 이동 수
+      ema_periods: [20, 50]       # 1h EMA 기간
+      funding_rate:
+        enabled: true
+        extreme_threshold: 0.01   # 펀딩비 >= 0.01이면 극단으로 판단
+        weight: 0.3               # 바이어스 점수에서 펀딩비 가중치
+      ema_weight: 0.5             # EMA 추세 가중치
+      btc_eth_weight: 0.2         # BTC/ETH 시장 추세 가중치
+      threshold: 0.15             # 바이어스 판정 임계값 (0.3 → 0.15: NEUTRAL만 나오던 문제 해소)
+
+    # Position sizing per level
+    leverage: 5
+    qty_per_level_pct: 2.0        # 잔고의 2%를 레벨당 마진으로 할당 (5% → 2%: exposure limit 충돌 해소)
+    max_open_levels: 8            # 동시에 오픈 가능한 최대 레벨 수 (2%×5x=10% 노셔널/레벨 → 8레벨=80%)
+    max_total_exposure_pct: 80.0  # 총 노셔널 한도 (2%×5x×8=80%)
+
+    # Stale fill handling
+    stale_fill_revert_seconds: 360  # FILLED 상태 유지 시간 초과 시 PENDING으로 복원 (5분 캔들 > 1주기)
+
+    # Concurrency limit
+    max_symbols: 8                # 동시에 그리드를 생성할 최대 심볼 수 (5→8: 거래 빈도 증가)
+
+    # Profitability filter
+    min_spacing_pct: 0.55         # 최소 spacing % (0.50→0.55: 수수료 대비 마진 확보 + TP 도달 균형)
+
+    # Dynamic spacing — adjust grid spacing based on current vs average volatility
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 24
+      low_vol_multiplier: 0.8
+      high_vol_multiplier: 1.4
+      vol_ratio_low_threshold: 0.6
+      vol_ratio_high_threshold: 1.5
+
+    # Adaptive levels — automatically adjust level count to target a spacing %
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.55
+      min_levels: 4
+      max_levels: 16
+
+    # Safety
+    max_drawdown_pct: 20.0        # 미실현 손실이 이 비율 초과 시 그리드 일시정지
+
+exit:
+  grid_timeout_hours: 24          # 이 시간 경과 시 강제 리센터
+  hard_stop_loss_pct: 5.0         # 계좌 총 손실이 이 비율 초과 시 전체 청산
