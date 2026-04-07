@@ -15,6 +15,7 @@ from typing import Optional
 from loguru import logger
 
 from src.strategy.asset.base import DailyStats
+from src.tracker.advanced_analytics import AdvancedAnalytics
 from src.utils.db import DatabaseManager
 
 
@@ -38,6 +39,10 @@ class PositionTracker:
         self.db = db
         self.mode = mode
         logger.info("PositionTracker initialised in '{}' mode", mode)
+
+    def get_analytics(self) -> AdvancedAnalytics:
+        """Return an :class:`AdvancedAnalytics` instance for this tracker's mode."""
+        return AdvancedAnalytics(self.db, self.mode)
 
     # ===================================================================
     # E-06: Position P&L

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
 
+from src.order.live_position_ledger import LivePositionLedger
 from src.strategy.asset.base import DailyStats
 from src.strategy.asset.grid_sizing import GridSizingStrategy
 from src.tracker.position_tracker import PositionTracker
@@ -52,6 +53,11 @@ class GridPositionManager:
         self._level_positions: Dict[LevelKey, int] = {}    # → position_id in DB
         self._level_order_ids: Dict[LevelKey, str] = {}    # → orderId in paper executor
         self._level_entry_fees: Dict[LevelKey, float] = {} # → entry fee
+
+        # Live mode: internal ledger to track micro-positions for net-position translation
+        self._ledger: Optional[LivePositionLedger] = (
+            LivePositionLedger() if mode == "live" else None
+        )
 
     def _key(self, msg: GridSignalMessage) -> LevelKey:
         """Create composite key from signal message."""
@@ -141,6 +147,18 @@ class GridPositionManager:
             self._level_order_ids[key] = order_id
         self._level_entry_fees[key] = fee
 
+        # Live mode: record micro-position in ledger for net-position tracking
+        if self._ledger is not None:
+            self._ledger.add_position(
+                level_key=key,
+                symbol=symbol,
+                side=side,
+                qty=order_req.qty,
+                entry_price=fill_price,
+                leverage=leverage,
+                margin=order_req.risk_amount,
+            )
+
         position_id = self._tracker.add_position({
             "mode": self._mode,
             "symbol": symbol,
@@ -195,15 +213,33 @@ class GridPositionManager:
 
         tp_price = msg.tp_price
         try:
-            order_key = self._level_order_ids.get(key, "")
-            if order_key and hasattr(self._executor, 'close_position_by_key'):
-                result = await self._executor.close_position_by_key(order_key, tp_price)
+            if self._ledger is not None and hasattr(self._executor, 'close_partial'):
+                # Live mode: partial close using ledger qty
+                close_qty = self._ledger.get_partial_close_qty(key)
+                pos_side = position["side"]
+                if close_qty > 0:
+                    result = await self._executor.close_partial(
+                        symbol=symbol, side=pos_side,
+                        qty=close_qty, current_price=tp_price,
+                    )
+                else:
+                    logger.warning("Grid TP: ledger has no qty for key={}", key)
+                    close_side = "Sell" if pos_side == "Buy" else "Buy"
+                    result = await self._executor.close_position(
+                        symbol=symbol, side=close_side,
+                        qty=float(position["size"]), current_price=tp_price,
+                    )
             else:
-                close_side = "Sell" if position["side"] == "Buy" else "Buy"
-                result = await self._executor.close_position(
-                    symbol=symbol, side=close_side,
-                    qty=float(position["size"]), current_price=tp_price,
-                )
+                # Paper mode: close by key or full position
+                order_key = self._level_order_ids.get(key, "")
+                if order_key and hasattr(self._executor, 'close_position_by_key'):
+                    result = await self._executor.close_position_by_key(order_key, tp_price)
+                else:
+                    close_side = "Sell" if position["side"] == "Buy" else "Buy"
+                    result = await self._executor.close_position(
+                        symbol=symbol, side=close_side,
+                        qty=float(position["size"]), current_price=tp_price,
+                    )
         except Exception as exc:
             logger.error("Grid TP close failed {}: {}", symbol, exc)
             return None
@@ -221,6 +257,10 @@ class GridPositionManager:
             exit_type="take_profit",
             fee=total_fee,
         )
+
+        # Live mode: remove from ledger
+        if self._ledger is not None:
+            self._ledger.remove_position(key)
 
         self._level_positions.pop(key, None)
         self._level_order_ids.pop(key, None)
@@ -260,15 +300,33 @@ class GridPositionManager:
         current_price = msg.level_price
 
         try:
-            order_key = self._level_order_ids.get(key, "")
-            if order_key and hasattr(self._executor, 'close_position_by_key'):
-                result = await self._executor.close_position_by_key(order_key, current_price)
+            if self._ledger is not None and hasattr(self._executor, 'close_partial'):
+                # Live mode: partial close using ledger qty
+                close_qty = self._ledger.get_partial_close_qty(key)
+                pos_side = position["side"]
+                if close_qty > 0:
+                    result = await self._executor.close_partial(
+                        symbol=symbol, side=pos_side,
+                        qty=close_qty, current_price=current_price,
+                    )
+                else:
+                    logger.warning("Grid close: ledger has no qty for key={}", key)
+                    close_side = "Sell" if pos_side == "Buy" else "Buy"
+                    result = await self._executor.close_position(
+                        symbol=symbol, side=close_side,
+                        qty=float(position["size"]), current_price=current_price,
+                    )
             else:
-                close_side = "Sell" if position["side"] == "Buy" else "Buy"
-                result = await self._executor.close_position(
-                    symbol=symbol, side=close_side,
-                    qty=float(position["size"]), current_price=current_price,
-                )
+                # Paper mode: close by key or full position
+                order_key = self._level_order_ids.get(key, "")
+                if order_key and hasattr(self._executor, 'close_position_by_key'):
+                    result = await self._executor.close_position_by_key(order_key, current_price)
+                else:
+                    close_side = "Sell" if position["side"] == "Buy" else "Buy"
+                    result = await self._executor.close_position(
+                        symbol=symbol, side=close_side,
+                        qty=float(position["size"]), current_price=current_price,
+                    )
         except Exception as exc:
             logger.error("Grid close failed {}: {}", symbol, exc)
             return None
@@ -286,6 +344,10 @@ class GridPositionManager:
             exit_type="market",
             fee=total_fee,
         )
+
+        # Live mode: remove from ledger
+        if self._ledger is not None:
+            self._ledger.remove_position(key)
 
         self._level_positions.pop(key, None)
         self._level_order_ids.pop(key, None)

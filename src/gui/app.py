@@ -117,7 +117,7 @@ async def dashboard(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"mode": mode, "page": "dashboard"},
+        context={"mode": mode, "page": "dashboard", "active_tab": "dashboard"},
     )
 
 
@@ -128,7 +128,7 @@ async def positions_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="positions.html",
-        context={"mode": mode, "page": "positions"},
+        context={"mode": mode, "page": "positions", "active_tab": "positions"},
     )
 
 
@@ -139,7 +139,7 @@ async def history_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="history.html",
-        context={"mode": mode, "page": "history"},
+        context={"mode": mode, "page": "history", "active_tab": "history"},
     )
 
 
@@ -150,7 +150,7 @@ async def settings_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="settings.html",
-        context={"mode": mode, "page": "settings"},
+        context={"mode": mode, "page": "settings", "active_tab": "settings"},
     )
 
 

@@ -1,9 +1,10 @@
 """Paper trading executor for simulated order execution.
 
 Provides a complete paper trading environment with realistic simulation
-of market orders, slippage, fees, isolated margin, and SL/TP monitoring.
+of market orders, slippage, fees, isolated margin, SL/TP monitoring,
+and funding rate simulation.
 
-Tasks E-03, E-04, E-05.
+Tasks E-03, E-04, E-05, Gap-E (funding simulation).
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
+
+from src.order.funding_simulator import FundingSimulator
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +114,9 @@ class PaperExecutor:
             initial_balance=initial_balance,
             balance=initial_balance,
         )
+        # Funding rate simulator
+        self.funding_simulator = FundingSimulator(config)
+
         # Track last known prices per symbol for unrealized P&L calculation
         self.last_prices: dict[str, float] = {}
         logger.info(
@@ -685,6 +691,63 @@ class PaperExecutor:
                 }
             )
         return result
+
+    def apply_funding(
+        self,
+        funding_rates: dict[str, float],
+        current_time: float | None = None,
+    ) -> list[dict]:
+        """Apply funding charges/credits to all open paper positions.
+
+        Called by the order process on each cycle to check if funding should
+        be applied. Updates the funding simulator's rates and checks all
+        open positions for funding charges.
+
+        Parameters
+        ----------
+        funding_rates:
+            Dict mapping symbol -> current funding rate.
+        current_time:
+            Override for testing (unix timestamp).
+
+        Returns
+        -------
+        List of funding charge dicts from FundingSimulator.check_and_apply.
+        """
+        # Update rates
+        for symbol, rate in funding_rates.items():
+            self.funding_simulator.update_rate(symbol, rate)
+
+        # Build position list from open positions
+        positions = []
+        for pos in self.account.positions.values():
+            positions.append({
+                "symbol": pos.symbol,
+                "side": pos.side,
+                "size": pos.qty,
+                "entry_price": pos.entry_price,
+                "leverage": pos.leverage,
+            })
+
+        if not positions:
+            return []
+
+        charges = self.funding_simulator.check_and_apply(positions, current_time)
+
+        # Apply charges to account balance
+        for charge in charges:
+            payment = charge["funding_payment"]
+            self.account.balance += payment
+            logger.info(
+                "Paper FUNDING: {} {} rate={:.6f} payment={:.4f} balance={:.2f}",
+                charge["symbol"],
+                charge["side"],
+                charge["rate"],
+                payment,
+                self.account.balance,
+            )
+
+        return charges
 
     def get_trade_history(self) -> List[dict]:
         """Return all completed paper trades as dicts."""

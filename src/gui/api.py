@@ -407,23 +407,48 @@ async def get_trades(
     symbol: Optional[str] = Query(None, description="Filter by symbol"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(50, ge=1, le=200, description="Results per page"),
+    from_date: Optional[str] = Query(None, alias="from", description="Start date (YYYY-MM-DD)"),
+    to_date: Optional[str] = Query(None, alias="to", description="End date (YYYY-MM-DD)"),
 ) -> Dict[str, Any]:
     """Return paginated trade history.
+
+    Supports date-range filtering via ``from`` and ``to`` query parameters
+    (YYYY-MM-DD).  Falls back to ``days`` look-back when dates are not
+    provided.
 
     Returns
     -------
     dict
-        ``{trades, total, page, pages}``
+        ``{trades, total, page, pages, summary, exit_breakdown}``
     """
     db = _get_db(request)
     effective_mode = mode or getattr(request.app.state, "mode", "paper")
 
-    cutoff_ts = int(time.time()) - days * 86400
+    # Determine time window: prefer explicit from/to, else use days
+    if from_date:
+        try:
+            from_dt = datetime.strptime(from_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            cutoff_ts = int(from_dt.timestamp())
+        except ValueError:
+            cutoff_ts = int(time.time()) - days * 86400
+    else:
+        cutoff_ts = int(time.time()) - days * 86400
+
     conn = db._get_connection()
 
-    # Build query with optional symbol filter
+    # Build query with optional symbol and date-range filters
     where_clauses = ["mode = ?", "exit_time IS NOT NULL", "exit_time >= ?"]
     params: list[Any] = [effective_mode, cutoff_ts]
+
+    if to_date:
+        try:
+            to_dt = datetime.strptime(to_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            # Include the entire "to" day
+            to_ts = int(to_dt.timestamp()) + 86400
+            where_clauses.append("exit_time < ?")
+            params.append(to_ts)
+        except ValueError:
+            pass  # ignore invalid to_date
 
     if symbol:
         where_clauses.append("symbol = ?")
@@ -1247,3 +1272,94 @@ async def tuner_reset(request: Request) -> ControlResponse:
         raise HTTPException(status_code=500, detail=f"Failed to reset tuner: {exc}")
 
     return ControlResponse(status="ok", message="Tuner reset to level 0")
+
+
+# ===================================================================
+# Advanced Analytics endpoints
+# ===================================================================
+
+
+def _get_analytics(request: Request):
+    """Build an AdvancedAnalytics instance from the tracker or DB."""
+    from src.tracker.advanced_analytics import AdvancedAnalytics
+
+    tracker = getattr(request.app.state, "tracker", None)
+    if tracker is not None:
+        return tracker.get_analytics()
+    # Fallback: build directly from DB
+    db = _get_db(request)
+    mode = getattr(request.app.state, "mode", "paper")
+    return AdvancedAnalytics(db, mode)
+
+
+def _sanitize_report(obj: Any) -> Any:
+    """Recursively replace inf/nan with None for JSON serialisation."""
+    if isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_report(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_report(v) for v in obj]
+    return obj
+
+
+@router.get("/analytics")
+async def get_analytics_report(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+) -> Dict[str, Any]:
+    """Full advanced analytics report."""
+    analytics = _get_analytics(request)
+    report = analytics.full_report(days=days)
+    return _sanitize_report(report)
+
+
+@router.get("/analytics/drawdown")
+async def get_drawdown_series(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+) -> List[Dict[str, Any]]:
+    """Drawdown series for charting."""
+    analytics = _get_analytics(request)
+    return analytics.drawdown_series(days=days)
+
+
+@router.get("/analytics/attribution")
+async def get_symbol_attribution(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+) -> List[Dict[str, Any]]:
+    """Per-symbol P&L attribution table."""
+    analytics = _get_analytics(request)
+    return _sanitize_report(analytics.symbol_attribution(days=days))
+
+
+@router.get("/analytics/hourly")
+async def get_hourly_performance(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+) -> List[Dict[str, Any]]:
+    """Hourly performance heatmap data."""
+    analytics = _get_analytics(request)
+    return analytics.hourly_performance(days=days)
+
+
+@router.get("/analytics/rolling")
+async def get_rolling_metrics(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+    sharpe_window: int = Query(default=7, ge=2, le=90),
+    win_rate_window: int = Query(default=20, ge=5, le=200),
+) -> Dict[str, Any]:
+    """Rolling Sharpe ratio and win rate for charts."""
+    analytics = _get_analytics(request)
+    return _sanitize_report({
+        "rolling_sharpe": analytics.rolling_sharpe(
+            window_days=sharpe_window, total_days=days,
+        ),
+        "rolling_win_rate": analytics.rolling_win_rate(
+            window_trades=win_rate_window,
+        ),
+    })

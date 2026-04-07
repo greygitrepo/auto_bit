@@ -165,10 +165,14 @@ class OrderManagerProcess(multiprocessing.Process):
             self._rest_client = BybitClient(api_key=api_key, api_secret=api_secret)
             self._ticker_cache: Dict[str, float] = {}
             self._last_ticker_fetch: float = 0.0
+            self._funding_rate_cache: Dict[str, float] = {}
+            self._last_funding_rate_fetch: float = 0.0
         else:
             self._rest_client = bybit_client
             self._ticker_cache = {}
             self._last_ticker_fetch = 0.0
+            self._funding_rate_cache = {}
+            self._last_funding_rate_fetch = 0.0
 
         # Determine current balance
         if mode == "live" and bybit_client is not None:
@@ -227,9 +231,11 @@ class OrderManagerProcess(multiprocessing.Process):
                 await self._monitor_positions()
                 last_monitor_time = now
 
-            # c2. For grid mode: still sync balance to DB periodically
+            # c2. For grid mode: sync balance and apply funding charges
             if self._grid_manager is not None and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
                 if self._mode == "paper" and isinstance(self._executor, PaperExecutor):
+                    # Apply funding rate simulation to open paper positions
+                    self._apply_paper_funding()
                     self._db.set_state("current_balance_paper", str(round(self._executor.account.balance, 4)))
                     self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
                 last_monitor_time = now
@@ -694,6 +700,10 @@ class OrderManagerProcess(multiprocessing.Process):
             self._db.set_state("current_balance_paper", str(round(self._executor.account.balance, 4)))
             self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
 
+        # Apply funding rate simulation for paper mode
+        if self._mode == "paper" and isinstance(self._executor, PaperExecutor):
+            self._apply_paper_funding()
+
         # Sync live wallet balance every monitor cycle
         if self._mode == "live" and self._rest_client is not None:
             try:
@@ -753,6 +763,43 @@ class OrderManagerProcess(multiprocessing.Process):
                 self.event_queue.put_nowait(msg)
             except queue.Full:
                 logger.warning("P3 event_queue full, dropping slot_available")
+
+    # ------------------------------------------------------------------
+    # Funding rate simulation
+    # ------------------------------------------------------------------
+
+    def _apply_paper_funding(self) -> None:
+        """Fetch funding rates periodically and apply to paper positions.
+
+        Funding rates are fetched every hour from the exchange; the
+        FundingSimulator inside PaperExecutor handles the 8h schedule
+        internally and only charges when a Bybit funding boundary is crossed.
+        """
+        if not isinstance(self._executor, PaperExecutor):
+            return
+        if not self._executor.account.positions:
+            return
+
+        now = time.time()
+        # Refresh funding rates from exchange every hour
+        if now - self._last_funding_rate_fetch >= 3600.0:
+            symbols = set()
+            for pos in self._executor.account.positions.values():
+                symbols.add(pos.symbol)
+            for symbol in symbols:
+                try:
+                    rates = self._rest_client.get_funding_rate(symbol)
+                    if rates:
+                        rate = float(rates[0].get("fundingRate", 0))
+                        self._funding_rate_cache[symbol] = rate
+                except Exception:
+                    pass  # Non-critical
+            self._last_funding_rate_fetch = now
+
+        if self._funding_rate_cache:
+            charges = self._executor.apply_funding(self._funding_rate_cache)
+            if charges:
+                logger.info("P3 applied {} funding charges", len(charges))
 
     # ------------------------------------------------------------------
     # Helpers

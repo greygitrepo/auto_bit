@@ -1,39 +1,31 @@
-active: grid_sizing          # grid_sizing | fixed_ratio
-
+active: grid_sizing
 capital:
-  mode: fixed
   initial_balance: 20
-
-strategies:
-  fixed_ratio:
-    capital_per_position_pct: 30.0   # 20 USDT × 30% = 6 USDT/종목
-    risk_per_trade_pct: 2.0          # 20 USDT × 2% = 0.4 USDT 리스크/거래
-
-    min_leverage: 1
-    max_leverage: 10
-
-    max_concurrent_positions: 8
-    max_per_symbol: 1
-
-daily_limits:
-  max_daily_loss_pct: 50.0           # 테스트: 50%까지 허용 (페이퍼)
-  max_daily_trades: 1000             # Phase 2 검증용 확대
-  reset_time_utc: "00:00"
-
+  mode: fixed
 consecutive_loss:
-  cooldown_after: 5                  # 5회 연속 손절 후 쿨다운
-  cooldown_minutes: 5                # 5분 쿨다운 (테스트 단축)
-  stop_after: 30                     # Cycle 6: raised from 10 (trailing breakeven exits counted as losses)
-
+  cooldown_after: 7
+  cooldown_minutes: 5
+  stop_after: 20
+daily_limits:
+  max_daily_loss_pct: 40.0
+  max_daily_trades: 500
+  reset_time_utc: 00:00
 drawdown:
-  warning_pct: 50                    # 페이퍼 테스트: 대폭 완화
-  reduce_pct: 70
-  reduce_factor: 0.5
-  stop_pct: 90                       # 거의 전체 손실까지 허용 (페이퍼)
   auto_recover: true
-
+  reduce_factor: 0.5
+  reduce_pct: 70
+  stop_pct: 90
+  warning_pct: 50
 paper:
   fee_rate:
     maker: 0.0001
     taker: 0.0006
-  slippage_bps: 15              # 신규 상장 알트코인 현실적 슬리피지 (15 bps = 0.15%)
+  slippage_bps: 15
+strategies:
+  fixed_ratio:
+    capital_per_position_pct: 30.0
+    max_concurrent_positions: 8
+    max_leverage: 10
+    max_per_symbol: 1
+    min_leverage: 1
+    risk_per_trade_pct: 2.0

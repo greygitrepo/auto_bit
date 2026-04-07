@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from loguru import logger
 
+from src.order.slippage_guard import SlippageGuard
 from src.strategy.position.base import (
     BiasDirection,
     GridAction,
@@ -22,6 +23,7 @@ from src.strategy.position.base import (
 )
 from src.strategy.position.bias_calculator import BiasCalculator
 from src.strategy.position.grid_engine import GridEngine
+from src.strategy.position.mtf_filter import MTFAnalysis, MTFFilter
 from src.utils.db import DatabaseManager
 
 
@@ -41,6 +43,11 @@ class GridBiasStrategy:
 
         self.engine = GridEngine(grid_cfg)
         self.bias_calc = BiasCalculator(grid_cfg)
+
+        # Multi-timeframe filter
+        mtf_cfg = grid_cfg.get("mtf", {})
+        self.mtf_filter = MTFFilter(mtf_cfg)
+        self._mtf_enabled = mtf_cfg.get("enabled", False)
 
         # Grid state cache: symbol -> GridState
         self._grids: Dict[str, GridState] = {}
@@ -64,6 +71,14 @@ class GridBiasStrategy:
         # Funding rate cache: symbol -> rate
         self._funding_rates: Dict[str, float] = {}
 
+        # Slippage guard for dynamic min spacing
+        paper_cfg = config.get("paper", {})
+        self._slippage_guard = SlippageGuard({
+            "slippage_bps": paper_cfg.get("slippage_bps", 15),
+            "max_slippage_bps": paper_cfg.get("max_slippage_bps", 50),
+            "fee_rate": paper_cfg.get("fee_rate", {"taker": 0.0006}),
+        })
+
     # ------------------------------------------------------------------
     # Main evaluation (called per 5m candle)
     # ------------------------------------------------------------------
@@ -72,12 +87,15 @@ class GridBiasStrategy:
         self,
         symbol: str,
         candle_5m: Dict[str, Any],
-        df_1h: Optional[pd.DataFrame],
-        btc_trend: str,
-        eth_trend: str,
-        current_balance: float,
-        initial_balance: float,
+        df_1h: Optional[pd.DataFrame] = None,
+        btc_trend: str = "mixed",
+        eth_trend: str = "mixed",
+        current_balance: float = 0.0,
+        initial_balance: float = 0.0,
         mode: str = "paper",
+        *,
+        df_5m: Optional[pd.DataFrame] = None,
+        df_15m: Optional[pd.DataFrame] = None,
     ) -> List[GridSignal]:
         """Evaluate the grid for a symbol and return action signals.
 
@@ -90,11 +108,18 @@ class GridBiasStrategy:
             current_balance: Current account balance.
             initial_balance: Initial account balance.
             mode: "paper" or "live".
+            df_5m: 5m OHLCV DataFrame with indicators (optional, for MTF filter).
+            df_15m: 15m OHLCV DataFrame with indicators (optional, for MTF filter).
 
         Returns:
             List of GridSignal actions to send to P3.
         """
         signals: List[GridSignal] = []
+
+        # --- MTF analysis (if data available) ---
+        mtf_analysis: Optional[MTFAnalysis] = None
+        if self._mtf_enabled and df_5m is not None and df_15m is not None and df_1h is not None:
+            mtf_analysis = self.mtf_filter.analyze(df_5m, df_15m, df_1h)
 
         # Check hard stop loss at account level
         if initial_balance > 0:
@@ -113,10 +138,16 @@ class GridBiasStrategy:
             if self.max_symbols > 0 and len(self._grids) >= self.max_symbols:
                 return []
 
+            # MTF gate: block grid creation when timeframes conflict
+            if mtf_analysis is not None and not self.mtf_filter.should_create_grid(mtf_analysis):
+                logger.info("{}: grid creation blocked by MTF filter ({})", symbol, mtf_analysis.alignment)
+                return []
+
             # Create a new grid for this symbol (in-memory only; DB persist deferred)
             grid = self._create_grid_for_symbol(
                 symbol, candle_5m, df_1h, btc_trend, eth_trend,
                 current_balance, initial_balance, mode,
+                mtf_analysis=mtf_analysis,
             )
             if grid is None:
                 return []
@@ -165,6 +196,28 @@ class GridBiasStrategy:
         # Check fills on PENDING levels
         fill_signals = self.engine.check_fills(candle_5m, grid.levels)
         just_filled_indices = set()
+
+        # MTF fill filtering: block fills that go against strong MTF direction
+        if mtf_analysis is not None:
+            filtered_fills: List[GridSignal] = []
+            for sig in fill_signals:
+                if self.mtf_filter.should_allow_fill(mtf_analysis, sig.side):
+                    filtered_fills.append(sig)
+                else:
+                    # Revert the level back to PENDING since we're blocking this fill
+                    for lv in grid.levels:
+                        if lv.level_index == sig.level_index and lv.status == GridLevelStatus.FILLED:
+                            lv.status = GridLevelStatus.PENDING
+                            lv.fill_price = 0.0
+                            lv.fill_time = 0
+                            lv.updated_at = int(time.time())
+                            break
+                    logger.info(
+                        "{}: fill blocked by MTF filter: level={} side={} mtf={}",
+                        symbol, sig.level_index, sig.side, mtf_analysis.alignment,
+                    )
+            fill_signals = filtered_fills
+
         for sig in fill_signals:
             sig.symbol = symbol
             sig.qty_per_level = grid.qty_per_level
@@ -209,6 +262,7 @@ class GridBiasStrategy:
         current_balance: float,
         initial_balance: float,
         mode: str,
+        mtf_analysis: Optional[MTFAnalysis] = None,
     ) -> Optional[GridState]:
         """Create a new grid for a symbol."""
         close_price = float(candle_5m.get("close", 0))
@@ -230,6 +284,14 @@ class GridBiasStrategy:
             df_1h, funding_rate, btc_trend, eth_trend,
         )
 
+        # MTF bias adjustment
+        if mtf_analysis is not None:
+            magnitude = self.mtf_filter.adjust_bias(magnitude, mtf_analysis)
+            # Recalculate level_shift from adjusted magnitude
+            max_shift = self.bias_calc.max_level_shift
+            level_shift = int(round(magnitude * max_shift))
+            level_shift = max(-max_shift, min(max_shift, level_shift))
+
         # Calculate qty per level
         qty_per_level = self._calc_qty_per_level(close_price, current_balance)
 
@@ -247,13 +309,19 @@ class GridBiasStrategy:
         grid.bias_magnitude = magnitude
 
         # Filter: reject if spacing is too small to cover fees + slippage
+        # Use dynamic min spacing from SlippageGuard (based on estimated slippage)
         if center > 0:
             spacing_pct = grid.grid_spacing / center
-            if spacing_pct < self.min_spacing_pct:
+            estimated_slippage = self._slippage_guard.estimate_slippage_bps(symbol, qty_per_level)
+            dynamic_min = self._slippage_guard.adjust_min_spacing(estimated_slippage) / 100.0
+            effective_min = max(self.min_spacing_pct, dynamic_min)
+            if spacing_pct < effective_min:
                 logger.info(
                     "Grid SKIPPED {}: spacing {:.4f}% < min {:.4f}% "
-                    "(not profitable after fees+slippage)",
-                    symbol, spacing_pct * 100, self.min_spacing_pct * 100,
+                    "(static={:.4f}%, dynamic={:.4f}%, est_slippage={:.1f}bps)",
+                    symbol, spacing_pct * 100, effective_min * 100,
+                    self.min_spacing_pct * 100, dynamic_min * 100,
+                    estimated_slippage,
                 )
                 return None
 

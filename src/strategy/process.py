@@ -515,6 +515,11 @@ class StrategyEngineProcess(multiprocessing.Process):
             # Try trend_tf as fallback
             df_1h = self._get_indicators(symbol, self._trend_tf)
 
+        # Get 5m and 15m indicator DataFrames for MTF filtering
+        df_5m = self._get_indicators(symbol, self._primary_tf)
+        htf = self._secondary_tfs[0] if self._secondary_tfs else self._primary_tf
+        df_15m = self._get_indicators(symbol, htf)
+
         # Get BTC/ETH trends
         btc_trend, eth_trend = self._get_market_trends()
 
@@ -537,6 +542,8 @@ class StrategyEngineProcess(multiprocessing.Process):
             current_balance=current_balance,
             initial_balance=initial_balance,
             mode=mode,
+            df_5m=df_5m,
+            df_15m=df_15m,
         )
 
         if not signals:

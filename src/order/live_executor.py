@@ -124,7 +124,7 @@ class LiveExecutor:
     # ------------------------------------------------------------------
 
     async def place_market_order(
-        self, symbol: str, side: str, qty: float
+        self, symbol: str, side: str, qty: float, current_price: float = 0.0
     ) -> dict:
         """Place a market order and return fill info.
 
@@ -365,6 +365,91 @@ class LiveExecutor:
             symbol,
             result["fillPrice"],
             result.get("orderId"),
+        )
+        return result
+
+    async def close_partial(
+        self, symbol: str, side: str, qty: float, current_price: float = 0.0
+    ) -> dict:
+        """Close a partial quantity from the net position.
+
+        Places a market order on the opposite side for the specified qty,
+        effectively reducing the net position by that amount. Used by the
+        LivePositionLedger flow to close individual micro-positions.
+
+        Parameters
+        ----------
+        symbol:
+            Trading pair.
+        side:
+            Current position side (``"Buy"`` or ``"Sell"``). The close order
+            is placed on the opposite side.
+        qty:
+            Quantity to close (just this micro-position, not the full net).
+        current_price:
+            Fallback price if fill price cannot be determined.
+
+        Returns
+        -------
+        Dict with ``orderId``, ``fillPrice``, and additional metadata.
+        """
+        close_side = "Sell" if side == "Buy" else "Buy"
+        qty = self._round_qty(symbol, qty)
+
+        # Get current price as fallback if not provided
+        if current_price == 0.0:
+            try:
+                tickers = await self._run_sync(self.client.get_tickers)
+                current_price = float(
+                    next((t["lastPrice"] for t in tickers if t["symbol"] == symbol), 0)
+                )
+            except Exception:
+                pass
+
+        result = await self._run_sync(
+            self.client.place_order,
+            symbol=symbol,
+            side=close_side,
+            qty=str(qty),
+            order_type="Market",
+        )
+
+        # Get actual fill price
+        order_id = result.get("orderId", "")
+        fill_price = float(result.get("avgPrice", 0))
+        if fill_price == 0 and order_id:
+            import time as _time
+            _time.sleep(0.5)
+            try:
+                executions = await self._run_sync(
+                    self.client.get_executions, symbol, order_id=order_id
+                )
+                if executions:
+                    fill_price = float(executions[0].get("execPrice", current_price))
+            except Exception:
+                fill_price = current_price
+        result["fillPrice"] = fill_price if fill_price > 0 else current_price
+
+        # Check for partial fill
+        if order_id:
+            try:
+                executions = await self._run_sync(
+                    self.client.get_executions, symbol, order_id=order_id
+                )
+                filled_qty = sum(float(e.get("execQty", 0)) for e in (executions or []))
+                if 0 < filled_qty < qty * 0.99:
+                    logger.warning(
+                        "PARTIAL FILL on close_partial for {} {}: requested={:.6f} filled={:.6f}",
+                        symbol, close_side, qty, filled_qty,
+                    )
+                    result["partialFill"] = True
+                    result["filledQty"] = filled_qty
+            except Exception:
+                pass
+
+        logger.info(
+            "Live CLOSE_PARTIAL: {} {:.6f} {} @ {:.4f} -> orderId={}",
+            close_side, qty, symbol, result["fillPrice"], result.get("orderId"),
         )
         return result
 

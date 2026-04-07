@@ -796,6 +796,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override trading mode from config (paper or live)",
     )
+    parser.add_argument(
+        "--config-dir",
+        default=None,
+        help="Override config directory path (for isolated environments)",
+    )
     return parser.parse_args()
 
 
@@ -803,6 +808,14 @@ def main() -> None:
     """Application entry point."""
     setup_logger("orchestrator")
     args = parse_args()
+
+    # Override config dir if specified
+    config_dir = args.config_dir or os.environ.get("AUTO_BIT_CONFIG_DIR")
+    if config_dir:
+        from pathlib import Path
+        AppConfig.reset()
+        AppConfig(config_dir=Path(config_dir))
+        logger.info("Config dir overridden: {}", config_dir)
 
     # Override mode if specified on command line
     if args.mode is not None:
