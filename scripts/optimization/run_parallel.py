@@ -387,6 +387,34 @@ def main():
         print(f"  {team}: trades={r['total_trades']} wr={r['win_rate']}% pnl={r['total_pnl']:.6f} "
               f"fees={r['total_fees']:.6f} open={r['open_positions']} symbols=[{syms}]")
 
+    # 8. Check for stagnant teams (no new trades vs previous cycle)
+    warnings_file = RESULTS_DIR / "warnings.json"
+    warnings = {}
+    if warnings_file.exists():
+        with open(warnings_file) as f:
+            warnings = json.load(f)
+
+    if args.cycle > 1:
+        for team in TEAMS:
+            prev_path = RESULTS_DIR / f"{team}_cycle{args.cycle - 1}.json"
+            if prev_path.exists():
+                with open(prev_path) as f:
+                    prev = json.load(f)
+                curr = all_results[team]
+                if curr["total_trades"] == prev["total_trades"]:
+                    w = warnings.get(team, 0) + 1
+                    warnings[team] = w
+                    print(f"  [WARNING {w}/3] {team}: no new trades since last cycle!")
+                    if w >= 3:
+                        print(f"  [PENALTY] {team}: 3 warnings reached — flagged for strategy overhaul")
+                else:
+                    warnings[team] = 0  # Reset on progress
+            else:
+                warnings[team] = 0
+
+    with open(warnings_file, "w") as f:
+        json.dump(warnings, f, indent=2)
+
     print(f"\n  Results saved to {RESULTS_DIR}/")
     print(f"  Run 'python3 scripts/optimization/report.py' for final report.\n")
 

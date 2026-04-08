@@ -53,9 +53,13 @@ class Orchestrator:
     """
 
     def __init__(self, headless: bool = False) -> None:
-        # Reset singleton in case of re-init in tests
-        AppConfig.reset()
-        self.config = AppConfig()
+        # Use existing AppConfig singleton (may have been pre-configured
+        # with --config-dir in main()). Only reset for fresh init.
+        try:
+            self.config = AppConfig()
+        except Exception:
+            AppConfig.reset()
+            self.config = AppConfig()
         self.headless = headless
 
         # Extract config sections
@@ -394,9 +398,11 @@ class Orchestrator:
                         proc.kill()
                         proc.join(timeout=2.0)
 
-        # Reload config from YAML files (picks up any changes)
+        # Reload config from YAML files (picks up any changes).
+        # Preserve config_dir if it was overridden.
+        prev_dir = getattr(self.config, '_config_dir', None)
         AppConfig.reset()
-        self.config = AppConfig()
+        self.config = AppConfig(config_dir=prev_dir)
         self._process_config = {
             "mode": self._mode,
             "asset": self.config.strategy.asset,

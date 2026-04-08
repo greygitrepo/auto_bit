@@ -225,15 +225,36 @@ class GridBiasStrategy:
             just_filled_indices.add(sig.level_index)
         signals.extend(fill_signals)
 
-        # Check TP hits on TP_SET/FILLED levels — but SKIP levels just filled
-        # this candle to prevent unrealistic same-candle fill+TP (0-second trades)
+        # Check TP hits on TP_SET/FILLED levels.
+        # For levels just filled this candle: mark as deferred so they get
+        # TP-checked on the NEXT candle instead of being dropped entirely.
         tp_signals = self.engine.check_tp_hits(candle_5m, grid.levels)
-        tp_signals = [s for s in tp_signals if s.level_index not in just_filled_indices]
+        deferred_tp = []
+        immediate_tp = []
         for sig in tp_signals:
-            sig.symbol = symbol
-        signals.extend(tp_signals)
+            if sig.level_index in just_filled_indices:
+                deferred_tp.append(sig)
+            else:
+                immediate_tp.append(sig)
 
-        # Recycle completed levels
+        # Send immediate TPs now
+        for sig in immediate_tp:
+            sig.symbol = symbol
+        signals.extend(immediate_tp)
+
+        # For deferred TPs: revert level to TP_SET so next candle will re-check.
+        # The level stays open (FILLED→TP_SET), ensuring the TP gets processed
+        # on the next evaluation cycle rather than being lost forever.
+        for sig in deferred_tp:
+            for lv in grid.levels:
+                if lv.level_index == sig.level_index and lv.status == GridLevelStatus.COMPLETED:
+                    lv.status = GridLevelStatus.TP_SET
+                    lv.tp_fill_price = 0.0
+                    lv.tp_fill_time = 0
+                    lv.updated_at = int(time.time())
+                    break
+
+        # Recycle completed levels (only those with successful TP)
         recycled = self.engine.recycle_completed(grid.levels)
         if recycled > 0:
             logger.debug("{}: recycled {} completed levels", symbol, recycled)

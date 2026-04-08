@@ -2,20 +2,20 @@
 # ============================================================
 # Parallel Optimization Tournament Runner — 10 Teams
 # All 10 teams run SIMULTANEOUSLY in isolated environments
+# Teams with 3+ warnings get strategy overhaul
 #
 # Usage: ./scripts/optimization/tournament.sh [cycle_minutes]
 # Default cycle: 30 minutes (5분봉 최소 6개 수집 가능)
 #
-# Deadline: 2026-04-08 01:00 UTC (10:00 KST)
+# Deadline: 2026-04-08 18:00 KST
 # ============================================================
 
 set -e
 cd "$(dirname "$0")/../.."
 
 CYCLE_MINUTES="${1:-30}"
-# Deadline: 2026-04-08 10:00 KST = 2026-04-08 01:00 UTC
-# System timezone is KST, so use KST time directly
-DEADLINE_KST="2026-04-08 10:00:00"
+# System timezone is KST
+DEADLINE_KST="2026-04-08 18:00:00"
 DEADLINE_TS=$(date -d "$DEADLINE_KST" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$DEADLINE_KST" +%s 2>/dev/null)
 REPORT_RESERVE_MINUTES=20
 RESULTS_DIR="scripts/optimization/results"
@@ -23,12 +23,13 @@ RESULTS_DIR="scripts/optimization/results"
 mkdir -p "$RESULTS_DIR" logs
 
 echo "============================================"
-echo "  PARALLEL OPTIMIZATION TOURNAMENT"
+echo "  PARALLEL OPTIMIZATION TOURNAMENT v2"
 echo "============================================"
 echo "  10 teams running SIMULTANEOUSLY"
 echo "  Cycle Duration: ${CYCLE_MINUTES} min"
-echo "  Deadline: $DEADLINE_KST KST (01:00 UTC)"
-echo "  Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+echo "  Deadline: $DEADLINE_KST KST"
+echo "  Started: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+echo "  Warning system: 3 strikes → strategy overhaul"
 echo "============================================"
 echo ""
 
