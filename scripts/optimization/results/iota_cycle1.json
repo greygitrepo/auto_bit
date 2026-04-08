@@ -1,0 +1,24 @@
+{
+  "team": "iota",
+  "cycle": 1,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T05:39:34.507409+00:00",
+  "total_trades": 5,
+  "win_count": 2,
+  "win_rate": 40.0,
+  "total_pnl": -0.190648,
+  "avg_pnl": -0.03813,
+  "best_trade": 0.053005,
+  "worst_trade": -0.132528,
+  "profit_factor": 0.297,
+  "total_fees": 0.01806,
+  "net_pnl": -0.190648,
+  "open_positions": 3,
+  "symbols_traded": [
+    "RLSUSDT",
+    "PRLUSDT",
+    "KITEUSDT",
+    "KATUSDT"
+  ],
+  "symbols_count": 4
+}

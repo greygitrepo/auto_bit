@@ -1,0 +1,28 @@
+{
+  "team": "zeta",
+  "cycle": 2,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T06:10:44.555229+00:00",
+  "total_trades": 10,
+  "win_count": 5,
+  "win_rate": 50.0,
+  "total_pnl": -0.034001,
+  "avg_pnl": -0.0034,
+  "best_trade": 0.167292,
+  "worst_trade": -0.102546,
+  "profit_factor": 0.9242,
+  "total_fees": 0.036086,
+  "net_pnl": -0.034001,
+  "open_positions": 8,
+  "symbols_traded": [
+    "4USDT",
+    "EDGEUSDT",
+    "TRIAUSDT",
+    "BANKUSDT",
+    "XPINUSDT",
+    "FOLKSUSDT",
+    "ESPUSDT",
+    "XAGUSDT"
+  ],
+  "symbols_count": 8
+}

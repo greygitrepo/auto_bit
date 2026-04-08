@@ -1,0 +1,19 @@
+{
+  "team": "eta",
+  "cycle": 6,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T08:15:31.145835+00:00",
+  "total_trades": 0,
+  "win_count": 0,
+  "win_rate": 0.0,
+  "total_pnl": 0.0,
+  "avg_pnl": 0.0,
+  "best_trade": 0.0,
+  "worst_trade": 0.0,
+  "profit_factor": 0,
+  "total_fees": 0.0,
+  "net_pnl": 0.0,
+  "open_positions": 2,
+  "symbols_traded": [],
+  "symbols_count": 0
+}

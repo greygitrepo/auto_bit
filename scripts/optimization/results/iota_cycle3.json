@@ -1,0 +1,30 @@
+{
+  "team": "iota",
+  "cycle": 3,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T06:41:54.651099+00:00",
+  "total_trades": 14,
+  "win_count": 4,
+  "win_rate": 28.57,
+  "total_pnl": -0.544101,
+  "avg_pnl": -0.038864,
+  "best_trade": 0.053005,
+  "worst_trade": -0.132528,
+  "profit_factor": 0.1959,
+  "total_fees": 0.050304,
+  "net_pnl": -0.544101,
+  "open_positions": 4,
+  "symbols_traded": [
+    "BREVUSDT",
+    "PLAYSOUTUSDT",
+    "XAUUSDT",
+    "ZBTUSDT",
+    "RLSUSDT",
+    "PRLUSDT",
+    "KITEUSDT",
+    "KATUSDT",
+    "ESPUSDT",
+    "ETHUSDT-24APR26"
+  ],
+  "symbols_count": 10
+}

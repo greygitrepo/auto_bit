@@ -1,0 +1,23 @@
+{
+  "team": "beta",
+  "cycle": 1,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T05:39:34.505126+00:00",
+  "total_trades": 3,
+  "win_count": 1,
+  "win_rate": 33.33,
+  "total_pnl": 0.058431,
+  "avg_pnl": 0.019477,
+  "best_trade": 0.108736,
+  "worst_trade": -0.027966,
+  "profit_factor": 2.1615,
+  "total_fees": 0.010712,
+  "net_pnl": 0.058431,
+  "open_positions": 1,
+  "symbols_traded": [
+    "XAUUSDT",
+    "PLAYSOUTUSDT",
+    "XAGUSDT"
+  ],
+  "symbols_count": 3
+}

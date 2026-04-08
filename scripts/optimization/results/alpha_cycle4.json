@@ -1,0 +1,25 @@
+{
+  "team": "alpha",
+  "cycle": 4,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T07:13:10.959621+00:00",
+  "total_trades": 5,
+  "win_count": 1,
+  "win_rate": 20.0,
+  "total_pnl": -0.143623,
+  "avg_pnl": -0.028725,
+  "best_trade": 0.008408,
+  "worst_trade": -0.065004,
+  "profit_factor": 0.0553,
+  "total_fees": 0.017967,
+  "net_pnl": -0.143623,
+  "open_positions": 3,
+  "symbols_traded": [
+    "BASEDUSDT",
+    "ESPUSDT",
+    "ETHUSDT-10APR26",
+    "BSBUSDT",
+    "ETHUSDT-29MAY26"
+  ],
+  "symbols_count": 5
+}

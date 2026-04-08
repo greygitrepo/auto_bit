@@ -1,0 +1,23 @@
+{
+  "team": "theta",
+  "cycle": 2,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T06:10:44.555888+00:00",
+  "total_trades": 5,
+  "win_count": 0,
+  "win_rate": 0.0,
+  "total_pnl": -0.133142,
+  "avg_pnl": -0.026628,
+  "best_trade": -0.019406,
+  "worst_trade": -0.048243,
+  "profit_factor": 0.0,
+  "total_fees": 0.017958,
+  "net_pnl": -0.133142,
+  "open_positions": 0,
+  "symbols_traded": [
+    "XAUTUSDT",
+    "XAGUSDT",
+    "XPLUSDT"
+  ],
+  "symbols_count": 3
+}

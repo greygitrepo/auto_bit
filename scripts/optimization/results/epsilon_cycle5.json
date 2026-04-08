@@ -1,0 +1,28 @@
+{
+  "team": "epsilon",
+  "cycle": 5,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T07:44:21.064868+00:00",
+  "total_trades": 16,
+  "win_count": 1,
+  "win_rate": 6.25,
+  "total_pnl": -0.554839,
+  "avg_pnl": -0.034677,
+  "best_trade": 0.031523,
+  "worst_trade": -0.144648,
+  "profit_factor": 0.0538,
+  "total_fees": 0.057566,
+  "net_pnl": -0.554839,
+  "open_positions": 0,
+  "symbols_traded": [
+    "ETHUSDT-10APR26",
+    "ETHUSDT-17APR26",
+    "BSBUSDT",
+    "BTCUSDT-17APR26",
+    "EDGEUSDT",
+    "CLUSDT",
+    "CFGUSDT",
+    "PRLUSDT"
+  ],
+  "symbols_count": 8
+}

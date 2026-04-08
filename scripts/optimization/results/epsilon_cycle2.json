@@ -1,0 +1,23 @@
+{
+  "team": "epsilon",
+  "cycle": 2,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T06:10:44.554891+00:00",
+  "total_trades": 4,
+  "win_count": 0,
+  "win_rate": 0.0,
+  "total_pnl": -0.288577,
+  "avg_pnl": -0.072144,
+  "best_trade": -0.020586,
+  "worst_trade": -0.144648,
+  "profit_factor": 0.0,
+  "total_fees": 0.014353,
+  "net_pnl": -0.288577,
+  "open_positions": 1,
+  "symbols_traded": [
+    "EDGEUSDT",
+    "ETHUSDT-10APR26",
+    "PRLUSDT"
+  ],
+  "symbols_count": 3
+}

@@ -1,0 +1,22 @@
+{
+  "team": "delta",
+  "cycle": 2,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T06:10:44.554543+00:00",
+  "total_trades": 2,
+  "win_count": 0,
+  "win_rate": 0.0,
+  "total_pnl": -0.104757,
+  "avg_pnl": -0.052378,
+  "best_trade": -0.034522,
+  "worst_trade": -0.070235,
+  "profit_factor": 0.0,
+  "total_fees": 0.007152,
+  "net_pnl": -0.104757,
+  "open_positions": 0,
+  "symbols_traded": [
+    "WLFIUSDT",
+    "KITEUSDT"
+  ],
+  "symbols_count": 2
+}

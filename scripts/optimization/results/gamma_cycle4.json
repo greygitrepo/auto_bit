@@ -1,0 +1,21 @@
+{
+  "team": "gamma",
+  "cycle": 4,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T07:13:10.960543+00:00",
+  "total_trades": 1,
+  "win_count": 0,
+  "win_rate": 0.0,
+  "total_pnl": -0.003615,
+  "avg_pnl": -0.003615,
+  "best_trade": -0.003615,
+  "worst_trade": -0.003615,
+  "profit_factor": 0.0,
+  "total_fees": 0.003615,
+  "net_pnl": -0.003615,
+  "open_positions": 0,
+  "symbols_traded": [
+    "PRLUSDT"
+  ],
+  "symbols_count": 1
+}

@@ -1,0 +1,23 @@
+{
+  "team": "eta",
+  "cycle": 1,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T05:39:34.506764+00:00",
+  "total_trades": 10,
+  "win_count": 10,
+  "win_rate": 100.0,
+  "total_pnl": 0.032941,
+  "avg_pnl": 0.003294,
+  "best_trade": 0.004443,
+  "worst_trade": 0.003047,
+  "profit_factor": "inf",
+  "total_fees": 0.014311,
+  "net_pnl": 0.032941,
+  "open_positions": 5,
+  "symbols_traded": [
+    "PRLUSDT",
+    "EDGEUSDT",
+    "BASEDUSDT"
+  ],
+  "symbols_count": 3
+}

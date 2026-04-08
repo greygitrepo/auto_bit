@@ -1,0 +1,31 @@
+{
+  "team": "beta",
+  "cycle": 4,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T07:13:10.960188+00:00",
+  "total_trades": 17,
+  "win_count": 4,
+  "win_rate": 23.53,
+  "total_pnl": 0.020398,
+  "avg_pnl": 0.0012,
+  "best_trade": 0.167292,
+  "worst_trade": -0.105656,
+  "profit_factor": 1.0448,
+  "total_fees": 0.061133,
+  "net_pnl": 0.020398,
+  "open_positions": 1,
+  "symbols_traded": [
+    "NOMUSDT",
+    "ENSOUSDT",
+    "ASTERUSDT",
+    "BASEDUSDT",
+    "BARDUSDT",
+    "CLUSDT",
+    "XAGUSDT",
+    "XAUUSDT",
+    "EDGEUSDT",
+    "PLAYSOUTUSDT",
+    "XPLUSDT"
+  ],
+  "symbols_count": 11
+}
