@@ -1,21 +1,23 @@
 #!/bin/bash
 # ============================================================
-# Parallel Optimization Tournament Runner
-# All 5 teams run SIMULTANEOUSLY in isolated environments
+# Parallel Optimization Tournament Runner — 10 Teams
+# All 10 teams run SIMULTANEOUSLY in isolated environments
 #
 # Usage: ./scripts/optimization/tournament.sh [cycle_minutes]
-# Default cycle: 30 minutes
+# Default cycle: 30 minutes (5분봉 최소 6개 수집 가능)
 #
-# Deadline: 2026-04-08 00:00 UTC (09:00 KST)
+# Deadline: 2026-04-08 01:00 UTC (10:00 KST)
 # ============================================================
 
 set -e
 cd "$(dirname "$0")/../.."
 
 CYCLE_MINUTES="${1:-30}"
-DEADLINE_UTC="2026-04-08 00:00:00"
-DEADLINE_TS=$(date -d "$DEADLINE_UTC" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$DEADLINE_UTC" +%s 2>/dev/null)
-REPORT_RESERVE_MINUTES=30
+# Deadline: 2026-04-08 10:00 KST = 2026-04-08 01:00 UTC
+# System timezone is KST, so use KST time directly
+DEADLINE_KST="2026-04-08 10:00:00"
+DEADLINE_TS=$(date -d "$DEADLINE_KST" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$DEADLINE_KST" +%s 2>/dev/null)
+REPORT_RESERVE_MINUTES=20
 RESULTS_DIR="scripts/optimization/results"
 
 mkdir -p "$RESULTS_DIR" logs
@@ -23,9 +25,9 @@ mkdir -p "$RESULTS_DIR" logs
 echo "============================================"
 echo "  PARALLEL OPTIMIZATION TOURNAMENT"
 echo "============================================"
-echo "  5 teams running SIMULTANEOUSLY"
+echo "  10 teams running SIMULTANEOUSLY"
 echo "  Cycle Duration: ${CYCLE_MINUTES} min"
-echo "  Deadline: $DEADLINE_UTC (09:00 KST)"
+echo "  Deadline: $DEADLINE_KST KST (01:00 UTC)"
 echo "  Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "============================================"
 echo ""
@@ -56,7 +58,7 @@ while true; do
     echo ""
     echo "========== ROUND $CYCLE =========="
     echo "Time remaining: $((REMAINING_SEC / 60)) minutes"
-    echo "All 5 teams start NOW (parallel, ${CYCLE_MINUTES}min)"
+    echo "All 10 teams start NOW (parallel, ${CYCLE_MINUTES}min)"
     echo ""
 
     RESET_FLAG=""

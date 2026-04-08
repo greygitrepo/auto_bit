@@ -12,7 +12,7 @@ from loguru import logger
 class SlippageGuard:
     """Estimates real-time slippage and gates orders that would be unprofitable."""
 
-    SAFETY_MARGIN = 1.2  # 20% buffer on min spacing calculation
+    SAFETY_MARGIN = 1.0  # No extra buffer — min_spacing_pct in config already provides margin
 
     def __init__(self, config: dict):
         self.base_slippage_bps: float = config.get("slippage_bps", 15)

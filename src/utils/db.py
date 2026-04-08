@@ -27,13 +27,25 @@ _DEFAULT_CONFIG_PATH = _PROJECT_ROOT / "config" / "app.yaml"
 
 
 def _load_db_path_from_config() -> str:
-    """Read database.path from config/app.yaml and resolve it relative to project root."""
+    """Read database.path from config, respecting --config-dir override."""
     try:
         import yaml  # noqa: WPS433 (nested import to keep yaml optional at module level)
+        import os
 
-        with open(_DEFAULT_CONFIG_PATH) as fh:
+        # Check for config dir override (set by --config-dir or env var)
+        config_dir = os.environ.get("AUTO_BIT_CONFIG_DIR")
+        if config_dir:
+            config_path = Path(config_dir) / "app.yaml"
+        else:
+            config_path = _DEFAULT_CONFIG_PATH
+
+        with open(config_path) as fh:
             cfg = yaml.safe_load(fh)
         rel = cfg.get("database", {}).get("path", "data/auto_bit.db")
+
+        # If path is absolute, use as-is; otherwise resolve relative to project root
+        if Path(rel).is_absolute():
+            return str(rel)
     except Exception:
         rel = "data/auto_bit.db"
     return str(_PROJECT_ROOT / rel)

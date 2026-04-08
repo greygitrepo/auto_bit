@@ -1,5 +1,5 @@
 # ============================================================
-# Optimization Tournament - 3 Team Parameter Profiles
+# Optimization Tournament - 10 Team Parameter Profiles
 # Each team has different parameter philosophy
 # ============================================================
 
@@ -287,3 +287,289 @@ epsilon:
     max_daily_trades: 100
     consecutive_loss_cooldown_after: 3
     consecutive_loss_stop_after: 6
+
+# Team Zeta: Funding Harvester - Exploit funding rate arbitrage with grid
+# Philosophy: Heavy funding rate weighting, prefer counter-funding direction
+zeta:
+  grid:
+    range_atr_multiplier: 1.2
+    min_range_pct: 0.7
+    max_range_pct: 7.0
+    recenter_interval_minutes: 200
+    recenter_threshold_pct: 3.5
+    leverage: 4
+    qty_per_level_pct: 2.2
+    max_open_levels: 7
+    max_symbols: 7
+    min_spacing_pct: 0.60
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.60
+      min_levels: 4
+      max_levels: 14
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 24
+      low_vol_multiplier: 0.85
+      high_vol_multiplier: 1.3
+      vol_ratio_low_threshold: 0.6
+      vol_ratio_high_threshold: 1.4
+    bias:
+      enabled: true
+      threshold: 0.10
+      max_level_shift: 3
+      ema_weight: 0.2
+      funding_rate:
+        enabled: true
+        weight: 0.6          # Heavy funding rate weight
+      btc_eth_weight: 0.2
+    mtf:
+      enabled: true
+      require_15m_alignment: true
+      require_1h_alignment: false
+      weight_5m: 0.3
+      weight_15m: 0.35
+      weight_1h: 0.35
+    max_drawdown_pct: 18.0
+  exit:
+    grid_timeout_hours: 28
+    hard_stop_loss_pct: 4.5
+  scanner:
+    max_days_since_listed: 365
+    min_24h_turnover_usdt: 4000000
+    max_candidates: 40
+    min_score: 20
+  asset:
+    max_daily_loss_pct: 25.0
+    max_daily_trades: 300
+    consecutive_loss_cooldown_after: 4
+    consecutive_loss_stop_after: 12
+
+# Team Eta: Volatility Surfer - Wide dynamic spacing, ride volatile moves
+# Philosophy: Maximize spacing in high vol, compress in low vol
+eta:
+  grid:
+    range_atr_multiplier: 1.8
+    min_range_pct: 1.2
+    max_range_pct: 10.0
+    recenter_interval_minutes: 90
+    recenter_threshold_pct: 2.0
+    leverage: 6
+    qty_per_level_pct: 2.0
+    max_open_levels: 9
+    max_symbols: 9
+    min_spacing_pct: 0.50
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.50
+      min_levels: 5
+      max_levels: 18
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 8
+      low_vol_multiplier: 0.5         # Compress aggressively in low vol
+      high_vol_multiplier: 2.0        # Expand aggressively in high vol
+      vol_ratio_low_threshold: 0.4
+      vol_ratio_high_threshold: 2.0
+    bias:
+      enabled: true
+      threshold: 0.12
+      max_level_shift: 3
+      ema_weight: 0.45
+      funding_rate:
+        enabled: true
+        weight: 0.25
+      btc_eth_weight: 0.3
+    mtf:
+      enabled: true
+      require_15m_alignment: false
+      require_1h_alignment: false
+      weight_5m: 0.5
+      weight_15m: 0.3
+      weight_1h: 0.2
+      trend_spacing_multiplier: 1.6
+      range_spacing_multiplier: 0.75
+      conflicting_reduce_levels: 2
+    max_drawdown_pct: 22.0
+  exit:
+    grid_timeout_hours: 16
+    hard_stop_loss_pct: 6.0
+  scanner:
+    max_days_since_listed: 365
+    min_24h_turnover_usdt: 2000000
+    max_candidates: 55
+    min_score: 15
+  asset:
+    max_daily_loss_pct: 35.0
+    max_daily_trades: 400
+    consecutive_loss_cooldown_after: 6
+    consecutive_loss_stop_after: 18
+
+# Team Theta: Micro Grid - Very tight grid, many levels, tiny positions
+# Philosophy: Death by a thousand cuts — many micro-profits
+theta:
+  grid:
+    range_atr_multiplier: 0.6
+    min_range_pct: 0.4
+    max_range_pct: 3.0
+    recenter_interval_minutes: 45
+    recenter_threshold_pct: 1.2
+    leverage: 3
+    qty_per_level_pct: 1.0
+    max_open_levels: 16
+    max_symbols: 10
+    min_spacing_pct: 0.30
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.30
+      min_levels: 10
+      max_levels: 30
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 4
+      low_vol_multiplier: 0.7
+      high_vol_multiplier: 1.2
+      vol_ratio_low_threshold: 0.5
+      vol_ratio_high_threshold: 1.3
+    bias:
+      enabled: false         # Pure mean reversion like delta but tighter
+      threshold: 0.30
+      max_level_shift: 0
+      ema_weight: 0.0
+      funding_rate:
+        enabled: false
+        weight: 0.0
+      btc_eth_weight: 0.0
+    mtf:
+      enabled: false
+    max_drawdown_pct: 12.0
+  exit:
+    grid_timeout_hours: 6
+    hard_stop_loss_pct: 3.0
+  scanner:
+    max_days_since_listed: 730
+    min_24h_turnover_usdt: 8000000   # Very high liquidity for tight spreads
+    max_candidates: 30
+    min_score: 30
+  asset:
+    max_daily_loss_pct: 15.0
+    max_daily_trades: 1000
+    consecutive_loss_cooldown_after: 10
+    consecutive_loss_stop_after: 30
+
+# Team Iota: Hybrid Balanced - Middle ground between all strategies
+# Philosophy: Jack of all trades, balanced risk/reward
+iota:
+  grid:
+    range_atr_multiplier: 1.1
+    min_range_pct: 0.7
+    max_range_pct: 7.0
+    recenter_interval_minutes: 160
+    recenter_threshold_pct: 2.8
+    leverage: 5
+    qty_per_level_pct: 2.0
+    max_open_levels: 8
+    max_symbols: 8
+    min_spacing_pct: 0.55
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.55
+      min_levels: 5
+      max_levels: 14
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 18
+      low_vol_multiplier: 0.8
+      high_vol_multiplier: 1.4
+      vol_ratio_low_threshold: 0.55
+      vol_ratio_high_threshold: 1.5
+    bias:
+      enabled: true
+      threshold: 0.15
+      max_level_shift: 3
+      ema_weight: 0.4
+      funding_rate:
+        enabled: true
+        weight: 0.3
+      btc_eth_weight: 0.3
+    mtf:
+      enabled: true
+      require_15m_alignment: true
+      require_1h_alignment: false
+      weight_5m: 0.35
+      weight_15m: 0.35
+      weight_1h: 0.30
+      trend_spacing_multiplier: 1.3
+      range_spacing_multiplier: 0.9
+      conflicting_reduce_levels: 2
+    max_drawdown_pct: 18.0
+  exit:
+    grid_timeout_hours: 22
+    hard_stop_loss_pct: 5.0
+  scanner:
+    max_days_since_listed: 365
+    min_24h_turnover_usdt: 3000000
+    max_candidates: 45
+    min_score: 22
+  asset:
+    max_daily_loss_pct: 28.0
+    max_daily_trades: 350
+    consecutive_loss_cooldown_after: 5
+    consecutive_loss_stop_after: 14
+
+# Team Kappa: Wide Net Low Leverage - Maximum symbols, minimum risk per trade
+# Philosophy: Diversification is the only free lunch
+kappa:
+  grid:
+    range_atr_multiplier: 1.4
+    min_range_pct: 0.9
+    max_range_pct: 8.0
+    recenter_interval_minutes: 180
+    recenter_threshold_pct: 3.0
+    leverage: 2
+    qty_per_level_pct: 1.2
+    max_open_levels: 6
+    max_symbols: 15           # Maximum diversification
+    min_spacing_pct: 0.65
+    adaptive_levels:
+      enabled: true
+      target_spacing_pct: 0.65
+      min_levels: 4
+      max_levels: 12
+    dynamic_spacing:
+      enabled: true
+      atr_lookback_hours: 24
+      low_vol_multiplier: 0.85
+      high_vol_multiplier: 1.3
+      vol_ratio_low_threshold: 0.6
+      vol_ratio_high_threshold: 1.5
+    bias:
+      enabled: true
+      threshold: 0.15
+      max_level_shift: 2
+      ema_weight: 0.4
+      funding_rate:
+        enabled: true
+        weight: 0.3
+      btc_eth_weight: 0.3
+    mtf:
+      enabled: true
+      require_15m_alignment: false
+      require_1h_alignment: false
+      weight_5m: 0.4
+      weight_15m: 0.3
+      weight_1h: 0.3
+    max_drawdown_pct: 15.0
+  exit:
+    grid_timeout_hours: 24
+    hard_stop_loss_pct: 3.5
+  scanner:
+    max_days_since_listed: 730
+    min_24h_turnover_usdt: 1500000   # Lower bar to get more symbols
+    max_candidates: 70
+    min_score: 12
+  asset:
+    max_daily_loss_pct: 20.0
+    max_daily_trades: 600
+    consecutive_loss_cooldown_after: 5
+    consecutive_loss_stop_after: 15

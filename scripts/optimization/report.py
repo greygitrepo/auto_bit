@@ -135,11 +135,14 @@ def generate_report(teams_data: dict) -> str:
 
     # Comparison table
     lines.append("  COMPARISON TABLE")
-    lines.append(f"  {'─' * 56}")
-    all_teams = ["alpha", "beta", "gamma", "delta", "epsilon"]
-    header = f"  {'Metric':<18}" + "".join(f" {t.capitalize():>10}" for t in all_teams)
+    all_teams = ["alpha", "beta", "gamma", "delta", "epsilon",
+                  "zeta", "eta", "theta", "iota", "kappa"]
+    col_w = 9
+    table_width = 18 + (col_w + 1) * len(all_teams)
+    lines.append(f"  {'─' * table_width}")
+    header = f"  {'Metric':<18}" + "".join(f" {t[:7].capitalize():>{col_w}}" for t in all_teams)
     lines.append(header)
-    lines.append(f"  {'─' * (18 + 11 * len(all_teams))}")
+    lines.append(f"  {'─' * table_width}")
 
     team_map = {a["team"]: a for a in aggregates}
     metrics = [
@@ -158,14 +161,14 @@ def generate_report(teams_data: dict) -> str:
             if team in team_map:
                 v = team_map[team].get(key, 0)
                 if isinstance(v, float):
-                    vals.append(f"{v:>10.4f}")
+                    vals.append(f"{v:>{col_w}.4f}")
                 else:
-                    vals.append(f"{v:>10}")
+                    vals.append(f"{v:>{col_w}}")
             else:
-                vals.append(f"{'N/A':>10}")
-        lines.append(f"  {label:<18}" + "".join(vals))
+                vals.append(f"{'N/A':>{col_w}}")
+        lines.append(f"  {label:<18}" + " ".join(vals))
 
-    lines.append(f"  {'─' * (18 + 11 * len(all_teams))}")
+    lines.append(f"  {'─' * table_width}")
     lines.append("")
 
     # Winner

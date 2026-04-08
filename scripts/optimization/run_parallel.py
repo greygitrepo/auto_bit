@@ -31,7 +31,8 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PROFILES_PATH = Path(__file__).resolve().parent / "profiles.yaml"
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-TEAMS = ["alpha", "beta", "gamma", "delta", "epsilon"]
+TEAMS = ["alpha", "beta", "gamma", "delta", "epsilon",
+         "zeta", "eta", "theta", "iota", "kappa"]
 BASE_PORT = 8090  # alpha=8090, beta=8091, ...
 
 
@@ -300,7 +301,7 @@ def main():
 
     profiles = load_profiles()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'='*75}")
     print(f"  PARALLEL OPTIMIZATION TOURNAMENT")
     print(f"  {len(TEAMS)} teams running SIMULTANEOUSLY")
     print(f"  Duration: {args.duration} min/cycle")
@@ -321,12 +322,14 @@ def main():
 
     print()
 
-    # 2. Start all teams simultaneously
+    # 2. Start teams with staggered delay to avoid API rate limits
     procs = {}
-    for team in TEAMS:
+    for i, team in enumerate(TEAMS):
         proc = start_team(team, team_dirs[team])
         procs[team] = proc
         print(f"  [{team}] Started (PID={proc.pid})")
+        if i < len(TEAMS) - 1:
+            time.sleep(5)  # 5-second stagger to spread API init calls
 
     print(f"\n  All {len(TEAMS)} teams running. Waiting {args.duration} minutes...\n")
 
@@ -342,10 +345,11 @@ def main():
             secs = remaining % 60
             print(f"\r  [{mins:02d}:{secs:02d} remaining] {alive}/{len(TEAMS)} teams alive", end="", flush=True)
 
-            # Check if any team crashed
+            # Check if any team died (crash or unexpected exit)
             for team, proc in procs.items():
-                if proc.poll() is not None and proc.returncode != 0:
-                    print(f"\n  [!] {team} crashed (exit={proc.returncode}), restarting...")
+                if proc.poll() is not None:
+                    print(f"\n  [!] {team} died (exit={proc.returncode}), restarting...")
+                    time.sleep(3)  # Brief delay before restart
                     procs[team] = start_team(team, team_dirs[team])
 
             time.sleep(5)
