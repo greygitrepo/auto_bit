@@ -26,8 +26,12 @@ def load_all_results() -> dict:
     """Load all cycle results, grouped by team."""
     teams = defaultdict(list)
     for path in sorted(RESULTS_DIR.glob("*.json")):
+        if path.name == "warnings.json":
+            continue
         with open(path) as f:
             data = json.load(f)
+        if "team" not in data:
+            continue
         teams[data["team"]].append(data)
     return dict(teams)
 

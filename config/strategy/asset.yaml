@@ -3,9 +3,9 @@ capital:
   initial_balance: 20
   mode: fixed
 consecutive_loss:
-  cooldown_after: 7
+  cooldown_after: 6
   cooldown_minutes: 5
-  stop_after: 20
+  stop_after: 16
 daily_limits:
   max_daily_loss_pct: 40.0
   max_daily_trades: 500

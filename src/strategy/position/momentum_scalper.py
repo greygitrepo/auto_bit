@@ -23,6 +23,7 @@ from src.strategy.position.base import (
     SignalType,
     TrailingStopState,
 )
+from src.strategy.position.registry import register_position
 
 
 # ======================================================================
@@ -194,6 +195,7 @@ class TimeLimitManager:
 # ======================================================================
 
 
+@register_position("momentum_scalper")
 class MomentumScalper(BasePositionStrategy):
     """Short-term momentum scalping strategy.
 

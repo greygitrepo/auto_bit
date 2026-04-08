@@ -73,30 +73,58 @@ def setup_team_env(team: str, profile: dict, port: int) -> Path:
     with open(app_cfg_path, "w") as f:
         yaml.dump(app_cfg, f, default_flow_style=False, allow_unicode=True)
 
+    # Determine strategy type: "grid_bias" (default) or position-based
+    strategy_type = profile.get("strategy_type", "grid_bias")
+
     # Apply team profile to grid.yaml
     grid_path = team_config_dir / "grid.yaml"
     with open(grid_path) as f:
         grid_cfg = yaml.safe_load(f)
 
-    grid_profile = profile.get("grid", {})
-    gb = grid_cfg["strategies"]["grid_bias"]
-    for key in ["range_atr_multiplier", "min_range_pct", "max_range_pct",
-                "recenter_interval_minutes", "recenter_threshold_pct",
-                "leverage", "qty_per_level_pct", "max_open_levels",
-                "max_symbols", "min_spacing_pct", "max_drawdown_pct"]:
-        if key in grid_profile:
-            gb[key] = grid_profile[key]
-    for section in ["adaptive_levels", "dynamic_spacing", "bias", "mtf"]:
-        if section in grid_profile:
-            if section in gb:
-                gb[section].update(grid_profile[section])
-            else:
-                gb[section] = grid_profile[section]
-    exit_profile = profile.get("exit", {})
-    if exit_profile:
-        grid_cfg["exit"].update(exit_profile)
+    if strategy_type == "grid_bias":
+        # Grid strategy: apply grid params
+        grid_profile = profile.get("grid", {})
+        gb = grid_cfg["strategies"]["grid_bias"]
+        for key in ["range_atr_multiplier", "min_range_pct", "max_range_pct",
+                    "recenter_interval_minutes", "recenter_threshold_pct",
+                    "leverage", "qty_per_level_pct", "max_open_levels",
+                    "max_symbols", "min_spacing_pct", "max_drawdown_pct"]:
+            if key in grid_profile:
+                gb[key] = grid_profile[key]
+        for section in ["adaptive_levels", "dynamic_spacing", "bias", "mtf"]:
+            if section in grid_profile:
+                if section in gb:
+                    gb[section].update(grid_profile[section])
+                else:
+                    gb[section] = grid_profile[section]
+        exit_profile = profile.get("exit", {})
+        if exit_profile:
+            grid_cfg["exit"].update(exit_profile)
+    else:
+        # Position strategy: disable grid, set position.active
+        grid_cfg["active"] = ""  # Empty = no grid strategy
+
     with open(grid_path, "w") as f:
         yaml.dump(grid_cfg, f, default_flow_style=False, allow_unicode=True)
+
+    # Apply position strategy config if not grid
+    if strategy_type != "grid_bias":
+        position_path = team_config_dir / "position.yaml"
+        with open(position_path) as f:
+            position_cfg = yaml.safe_load(f)
+        position_cfg["active"] = strategy_type
+        # Apply strategy-specific params
+        strategy_params = profile.get("strategy_params", {})
+        if strategy_params:
+            if "strategies" not in position_cfg:
+                position_cfg["strategies"] = {}
+            position_cfg["strategies"][strategy_type] = strategy_params
+        # Apply exit params
+        exit_profile = profile.get("exit_params", {})
+        if exit_profile:
+            position_cfg["exit"] = {**position_cfg.get("exit", {}), **exit_profile}
+        with open(position_path, "w") as f:
+            yaml.dump(position_cfg, f, default_flow_style=False, allow_unicode=True)
 
     # Apply scanner profile
     scanner_profile = profile.get("scanner", {})
@@ -292,6 +320,219 @@ def print_live_status(results: dict):
     print(f"{'='*75}")
 
 
+import random
+
+# Available strategy types for overhaul rotation
+ALL_STRATEGY_TYPES = [
+    "grid_bias", "momentum_scalper", "breakout_scalper",
+    "rsi_reversal", "ema_crossover", "volatility_breakout",
+]
+
+
+def _overhaul_team(team: str, profiles: dict, results: dict):
+    """Overhaul a stagnant team's strategy entirely.
+
+    1. Pick the best-performing team's strategy type as base
+    2. Mutate parameters randomly for diversity
+    3. Or assign a completely different strategy type
+    4. Save to profiles.yaml so next cycle picks it up
+    5. Reset the team's DB for a fresh start
+    """
+    # Find the best performing team
+    best_team = max(results, key=lambda t: results[t].get("total_pnl", -999))
+    best_profile = profiles.get(best_team, {})
+    current_type = profiles.get(team, {}).get("strategy_type", "grid_bias")
+
+    # Decide: 50% chance clone+mutate best team, 50% chance try a new strategy type
+    if random.random() < 0.5 and best_team != team:
+        # Clone best team's profile with mutations
+        import copy
+        new_profile = copy.deepcopy(best_profile)
+        new_profile = _mutate_profile(new_profile)
+        print(f"    → {team}: cloning {best_team} (type={new_profile.get('strategy_type', 'grid_bias')}) with mutations")
+    else:
+        # Pick a strategy type that the team hasn't used
+        available = [s for s in ALL_STRATEGY_TYPES if s != current_type]
+        new_type = random.choice(available)
+        new_profile = _generate_profile(new_type)
+        print(f"    → {team}: switching to new strategy: {new_type}")
+
+    # Update profiles dict (in memory) and save to YAML
+    profiles[team] = new_profile
+    with open(PROFILES_PATH, "w") as f:
+        yaml.dump(profiles, f, default_flow_style=False, allow_unicode=True)
+
+    # Reset team DB for fresh start
+    team_dir = PROJECT_ROOT / "data" / f"team_{team}"
+    reset_team_db(team_dir)
+    print(f"    → {team}: DB reset for fresh start")
+
+
+def _mutate_profile(profile: dict) -> dict:
+    """Apply random mutations to a profile's parameters."""
+    import copy
+    p = copy.deepcopy(profile)
+
+    strategy_type = p.get("strategy_type", "grid_bias")
+
+    if strategy_type == "grid_bias":
+        grid = p.get("grid", {})
+        # Mutate numeric params by ±20%
+        for key in ["range_atr_multiplier", "min_spacing_pct", "leverage",
+                     "qty_per_level_pct", "max_open_levels", "max_symbols"]:
+            if key in grid:
+                val = grid[key]
+                grid[key] = round(val * random.uniform(0.8, 1.2), 2)
+                if key in ("leverage", "max_open_levels", "max_symbols"):
+                    grid[key] = max(1, int(grid[key]))
+    else:
+        # Position strategy: mutate strategy_params
+        sp = p.get("strategy_params", {})
+        for key in list(sp.keys()):
+            if isinstance(sp[key], (int, float)) and not isinstance(sp[key], bool):
+                sp[key] = round(sp[key] * random.uniform(0.8, 1.2), 4)
+
+    # Mutate scanner params
+    scanner = p.get("scanner", {})
+    if "min_24h_turnover_usdt" in scanner:
+        scanner["min_24h_turnover_usdt"] = int(scanner["min_24h_turnover_usdt"] * random.uniform(0.5, 2.0))
+    if "min_score" in scanner:
+        scanner["min_score"] = max(3, int(scanner["min_score"] * random.uniform(0.7, 1.3)))
+
+    return p
+
+
+def _generate_profile(strategy_type: str) -> dict:
+    """Generate a fresh profile for a given strategy type."""
+    # Common scanner settings (random range)
+    scanner = {
+        "max_days_since_listed": random.choice([30, 60, 180, 365, 730]),
+        "min_24h_turnover_usdt": random.choice([500000, 1000000, 3000000, 5000000, 10000000]),
+        "max_candidates": random.randint(15, 60),
+        "min_score": random.randint(5, 30),
+    }
+    asset = {
+        "max_daily_loss_pct": random.choice([20, 30, 40]),
+        "max_daily_trades": random.choice([200, 400, 600]),
+        "consecutive_loss_cooldown_after": random.randint(3, 8),
+        "consecutive_loss_stop_after": random.randint(8, 20),
+    }
+
+    if strategy_type == "grid_bias":
+        return {
+            "strategy_type": "grid_bias",
+            "grid": {
+                "range_atr_multiplier": round(random.uniform(0.8, 2.5), 1),
+                "min_range_pct": round(random.uniform(0.5, 1.5), 1),
+                "max_range_pct": round(random.uniform(5, 12), 0),
+                "recenter_interval_minutes": random.choice([60, 90, 120, 180]),
+                "recenter_threshold_pct": round(random.uniform(1.5, 4.0), 1),
+                "leverage": random.randint(2, 8),
+                "qty_per_level_pct": round(random.uniform(1.0, 3.0), 1),
+                "max_open_levels": random.randint(4, 12),
+                "max_symbols": random.randint(3, 15),
+                "min_spacing_pct": round(random.uniform(0.45, 0.70), 2),
+                "adaptive_levels": {"enabled": True,
+                    "target_spacing_pct": round(random.uniform(0.45, 0.70), 2),
+                    "min_levels": random.randint(3, 6),
+                    "max_levels": random.randint(10, 20)},
+                "dynamic_spacing": {"enabled": True,
+                    "atr_lookback_hours": random.choice([6, 12, 24]),
+                    "low_vol_multiplier": round(random.uniform(0.5, 0.9), 1),
+                    "high_vol_multiplier": round(random.uniform(1.2, 2.0), 1),
+                    "vol_ratio_low_threshold": 0.5,
+                    "vol_ratio_high_threshold": 1.5},
+                "bias": {"enabled": random.choice([True, False]),
+                    "threshold": round(random.uniform(0.08, 0.20), 2),
+                    "max_level_shift": random.randint(1, 4),
+                    "ema_weight": 0.4,
+                    "funding_rate": {"enabled": random.choice([True, False]), "weight": 0.3},
+                    "btc_eth_weight": 0.3},
+                "mtf": {"enabled": random.choice([True, False]),
+                    "require_15m_alignment": False,
+                    "weight_5m": 0.4, "weight_15m": 0.3, "weight_1h": 0.3},
+                "max_drawdown_pct": random.choice([15, 20, 25]),
+            },
+            "exit": {
+                "grid_timeout_hours": random.choice([8, 12, 18, 24]),
+                "hard_stop_loss_pct": round(random.uniform(3.0, 8.0), 1),
+            },
+            "scanner": scanner,
+            "asset": asset,
+        }
+    else:
+        # Position-based strategy
+        return {
+            "strategy_type": strategy_type,
+            "strategy_params": _default_strategy_params(strategy_type),
+            "exit_params": {
+                "stop_loss": {
+                    "atr_period": 14,
+                    "atr_multiplier": round(random.uniform(1.2, 2.5), 1),
+                    "min_pct": 0.3,
+                    "max_pct": round(random.uniform(1.5, 3.0), 1),
+                },
+                "take_profit": {
+                    "risk_reward_ratio": round(random.uniform(1.2, 2.5), 1),
+                },
+                "trailing_stop": {
+                    "activation_r": round(random.uniform(0.4, 1.0), 1),
+                    "callback_atr_multiplier": round(random.uniform(0.4, 0.8), 1),
+                },
+                "time_limit": {
+                    "max_holding_minutes": random.choice([30, 45, 60, 90]),
+                    "warning_minutes": 25,
+                },
+            },
+            "scanner": scanner,
+            "asset": asset,
+        }
+
+
+def _default_strategy_params(strategy_type: str) -> dict:
+    """Return default params for a position strategy type."""
+    if strategy_type == "breakout_scalper":
+        return {
+            "bb_period": 20, "bb_std": 2.0,
+            "volume_multiplier": round(random.uniform(1.0, 1.8), 1),
+            "bb_squeeze_threshold": round(random.uniform(0.015, 0.03), 3),
+            "min_confidence": 0.5,
+        }
+    elif strategy_type == "rsi_reversal":
+        return {
+            "rsi_oversold": random.randint(15, 30),
+            "rsi_overbought": random.randint(70, 85),
+            "require_reversal_candle": random.choice([True, False]),
+            "volume_multiplier": round(random.uniform(0.8, 1.5), 1),
+            "min_confidence": 0.5,
+        }
+    elif strategy_type == "ema_crossover":
+        return {
+            "ema_fast": random.choice([3, 5, 8]),
+            "ema_slow": random.choice([15, 20, 25]),
+            "adx_threshold": random.randint(15, 25),
+            "require_adx": random.choice([True, False]),
+            "volume_multiplier": round(random.uniform(0.8, 1.3), 1),
+            "min_confidence": 0.5,
+        }
+    elif strategy_type == "volatility_breakout":
+        return {
+            "atr_breakout_multiplier": round(random.uniform(1.2, 2.0), 1),
+            "close_position_ratio": round(random.uniform(0.6, 0.8), 1),
+            "volume_multiplier": round(random.uniform(1.0, 1.5), 1),
+            "min_confidence": 0.5,
+        }
+    elif strategy_type == "momentum_scalper":
+        return {
+            "rsi_long_range": [random.randint(35, 50), random.randint(70, 85)],
+            "rsi_short_range": [random.randint(15, 30), random.randint(50, 65)],
+            "volume_multiplier": round(random.uniform(0.8, 1.5), 1),
+            "adx_threshold": random.randint(15, 25),
+            "min_confidence": 0.5,
+        }
+    return {}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run parallel optimization")
     parser.add_argument("--duration", type=int, default=30, help="Minutes per cycle")
@@ -406,7 +647,9 @@ def main():
                     warnings[team] = w
                     print(f"  [WARNING {w}/3] {team}: no new trades since last cycle!")
                     if w >= 3:
-                        print(f"  [PENALTY] {team}: 3 warnings reached — flagged for strategy overhaul")
+                        print(f"  [PENALTY] {team}: 3 warnings — STRATEGY OVERHAUL!")
+                        _overhaul_team(team, profiles, all_results)
+                        warnings[team] = 0  # Reset after overhaul
                 else:
                     warnings[team] = 0  # Reset on progress
             else:

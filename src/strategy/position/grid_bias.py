@@ -25,8 +25,10 @@ from src.strategy.position.bias_calculator import BiasCalculator
 from src.strategy.position.grid_engine import GridEngine
 from src.strategy.position.mtf_filter import MTFAnalysis, MTFFilter
 from src.utils.db import DatabaseManager
+from src.strategy.position.registry import register_grid
 
 
+@register_grid("grid_bias")
 class GridBiasStrategy:
     """Grid trading strategy with directional bias.
 

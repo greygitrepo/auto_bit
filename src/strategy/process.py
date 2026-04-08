@@ -23,8 +23,6 @@ from src.collector.bybit_client import BybitClient
 from src.collector.symbol_manager import SymbolManager
 from src.indicators.technical import IndicatorEngine
 from src.strategy.position.base import GridAction, SignalType
-from src.strategy.position.grid_bias import GridBiasStrategy
-from src.strategy.position.momentum_scalper import MomentumScalper
 from src.strategy.scanner.new_listing import NewListingScanner
 from src.strategy.tuner import StrategyTuner
 from src.utils.logger import setup_logger
@@ -198,31 +196,42 @@ class StrategyEngineProcess(multiprocessing.Process):
         from src.utils.db import DatabaseManager
         self._db = DatabaseManager()
 
-        # --- Determine active strategy mode ---
-        position_cfg = self._config.get("position", {})
-        grid_cfg = self._config.get("grid", {})
-        self._strategy_mode = grid_cfg.get("active", "") if grid_cfg else ""
+        # --- Determine active strategy via registry ---
+        from src.strategy.position.registry import get_strategy_class, ensure_loaded, GRID_STRATEGIES
+        ensure_loaded()
 
-        if self._strategy_mode == "grid_bias":
-            # --- Grid Bias Strategy ---
-            self._grid_strategy = GridBiasStrategy(grid_cfg, db=self._db)
-            self._grid_strategy.restore_from_db(
-                self._config.get("mode", "paper"),
-            )
+        # Check grid config first (backward compat)
+        grid_cfg = self._config.get("grid", {})
+        position_cfg = self._config.get("position", {})
+
+        # Strategy name: check grid.active first, then position.active, fallback
+        strategy_name = grid_cfg.get("active", "")
+        if not strategy_name or strategy_name not in GRID_STRATEGIES:
+            strategy_name = position_cfg.get("active", "momentum_scalper")
+
+        strategy_cls, is_grid = get_strategy_class(strategy_name)
+
+        if strategy_cls is None:
+            logger.warning("Unknown strategy '{}', falling back to momentum_scalper", strategy_name)
+            from src.strategy.position.momentum_scalper import MomentumScalper as _FallbackScalper
+            strategy_cls = _FallbackScalper
+            is_grid = False
+
+        if is_grid:
+            self._grid_strategy = strategy_cls(grid_cfg, db=self._db)
+            self._grid_strategy.restore_from_db(self._config.get("mode", "paper"))
             self._scalper = None
             self._tuner = None
-            # Funding rate fetch tracking
-            self._last_funding_fetch: float = 0.0
-            self._funding_fetch_interval: float = 3600.0  # 1 hour
-            logger.info("P2 using Grid Bias strategy")
+            self._last_funding_fetch = 0.0
+            self._funding_fetch_interval = 3600.0
+            logger.info("P2 using strategy: {} (grid type)", strategy_name)
         else:
-            # --- Legacy MomentumScalper ---
             self._grid_strategy = None
-            ms_cfg = position_cfg.get("strategies", {}).get("momentum_scalper", {})
+            ms_cfg = position_cfg.get("strategies", {}).get(strategy_name, {})
             exit_cfg = position_cfg.get("exit", {})
             if exit_cfg and "exit" not in ms_cfg:
                 ms_cfg["exit"] = exit_cfg
-            self._scalper = MomentumScalper(config=ms_cfg if ms_cfg else None)
+            self._scalper = strategy_cls(config=ms_cfg if ms_cfg else None)
 
             tuner_cfg = ms_cfg.get("tuner", {})
             self._tuner = StrategyTuner(
@@ -231,7 +240,7 @@ class StrategyEngineProcess(multiprocessing.Process):
                 db=self._db,
             )
             self._tuner.restore_from_db(self._scalper.params)
-            logger.info("P2 using MomentumScalper strategy")
+            logger.info("P2 using strategy: {} (position type)", strategy_name)
 
         # --- Load base symbol history via API ---
         for sym in self._base_symbols:

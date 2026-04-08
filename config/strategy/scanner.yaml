@@ -5,9 +5,9 @@ strategies:
       cooldown_after_sl_hours: 1
       volume_decline_threshold: 0.2
     liquidity:
-      min_24h_turnover_usdt: 2000000
+      min_24h_turnover_usdt: 500000
     listing:
-      max_days_since_listed: 365
+      max_days_since_listed: 30
       min_days_since_listed: 1
     market_env:
       ema_periods:
@@ -20,11 +20,11 @@ strategies:
       rsi_exclude_below: 10
       rsi_period: 14
     pool:
-      max_candidates: 60
+      max_candidates: 50
     scoring:
       listing_recency_weight: 0.0
       market_env_weight: 0.15
-      min_score: 15
+      min_score: 5
       momentum_weight: 0.2
       volatility_weight: 0.3
       volume_weight: 0.35
