@@ -88,3 +88,11 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
 ### 10. Live 최소 주문 금액 5 USDT 미달 (110094) — ✅ 수정 완료
 - **원인**: LiveExecutor.place_market_order에 min notional 체크 없음
 - **수정**: 주문 전 notional 계산 후 minNotionalValue 미만이면 reject 반환
+
+### 11. Trading Terms 미동의 (110123) — 관찰 중
+- XAGUSDT(은) 등 특정 상품 거래 시 Bybit 약관 동의 필요
+- 비치명적 (주문만 스킵). 블랙리스트 추가 또는 에러 시 심볼 자동 제외 검토
+
+### 12. 잔고 부족 (110007) — 관찰 중
+- 10개 포지션 동시 오픈으로 마진 소진
+- 비치명적 (신규 주문만 거부). max_concurrent_positions 설정으로 제어 가능
