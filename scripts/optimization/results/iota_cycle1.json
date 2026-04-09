@@ -2,20 +2,18 @@
   "team": "iota",
   "cycle": 1,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T09:38:03.450634+00:00",
-  "total_trades": 2,
+  "timestamp": "2026-04-09T00:54:25.582501+00:00",
+  "total_trades": 0,
   "win_count": 0,
   "win_rate": 0.0,
-  "total_pnl": -0.021944,
-  "avg_pnl": -0.010972,
-  "best_trade": -0.010206,
-  "worst_trade": -0.011738,
-  "profit_factor": 0.0,
-  "total_fees": 0.007204,
-  "net_pnl": -0.021944,
-  "open_positions": 4,
-  "symbols_traded": [
-    "BTCUSDT-17APR26"
-  ],
-  "symbols_count": 1
+  "total_pnl": 0.0,
+  "avg_pnl": 0.0,
+  "best_trade": 0.0,
+  "worst_trade": 0.0,
+  "profit_factor": 0,
+  "total_fees": 0.0,
+  "net_pnl": 0.0,
+  "open_positions": 0,
+  "symbols_traded": [],
+  "symbols_count": 0
 }

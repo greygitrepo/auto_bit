@@ -2,25 +2,21 @@
   "team": "eta",
   "cycle": 5,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T11:42:43.666556+00:00",
-  "total_trades": 6,
+  "timestamp": "2026-04-09T02:59:05.793239+00:00",
+  "total_trades": 2,
   "win_count": 0,
   "win_rate": 0.0,
-  "total_pnl": -0.117672,
-  "avg_pnl": -0.019612,
-  "best_trade": -0.003572,
-  "worst_trade": -0.067868,
+  "total_pnl": -0.015808,
+  "avg_pnl": -0.007904,
+  "best_trade": -0.00363,
+  "worst_trade": -0.012177,
   "profit_factor": 0.0,
-  "total_fees": 0.021531,
-  "net_pnl": -0.117672,
-  "open_positions": 2,
+  "total_fees": 0.00723,
+  "net_pnl": -0.015808,
+  "open_positions": 1,
   "symbols_traded": [
-    "VVVUSDT",
-    "ZROUSDT",
-    "HYPEUSDT",
-    "ESPUSDT",
-    "PIPPINUSDT",
-    "LABUSDT"
+    "DRIFTUSDT",
+    "RIVERUSDT"
   ],
-  "symbols_count": 6
+  "symbols_count": 2
 }

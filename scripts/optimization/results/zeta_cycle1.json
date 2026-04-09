@@ -2,21 +2,22 @@
   "team": "zeta",
   "cycle": 1,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T09:38:03.449821+00:00",
-  "total_trades": 2,
-  "win_count": 0,
-  "win_rate": 0.0,
-  "total_pnl": -0.166621,
-  "avg_pnl": -0.08331,
-  "best_trade": -0.064075,
-  "worst_trade": -0.102546,
-  "profit_factor": 0.0,
-  "total_fees": 0.007177,
-  "net_pnl": -0.166621,
-  "open_positions": 7,
+  "timestamp": "2026-04-09T00:54:25.581685+00:00",
+  "total_trades": 3,
+  "win_count": 1,
+  "win_rate": 33.33,
+  "total_pnl": -0.171897,
+  "avg_pnl": -0.057299,
+  "best_trade": 0.02319,
+  "worst_trade": -0.102654,
+  "profit_factor": 0.1189,
+  "total_fees": 0.010828,
+  "net_pnl": -0.171897,
+  "open_positions": 8,
   "symbols_traded": [
-    "ESPUSDT",
-    "LABUSDT"
+    "CFGUSDT",
+    "EDGEUSDT",
+    "KITEUSDT"
   ],
-  "symbols_count": 2
+  "symbols_count": 3
 }

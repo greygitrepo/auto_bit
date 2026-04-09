@@ -2,21 +2,22 @@
   "team": "epsilon",
   "cycle": 2,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T10:09:13.474776+00:00",
-  "total_trades": 2,
-  "win_count": 0,
-  "win_rate": 0.0,
-  "total_pnl": -0.024358,
-  "avg_pnl": -0.012179,
-  "best_trade": -0.002966,
-  "worst_trade": -0.021391,
-  "profit_factor": 0.0,
-  "total_fees": 0.007199,
-  "net_pnl": -0.024358,
+  "timestamp": "2026-04-09T01:25:35.545932+00:00",
+  "total_trades": 6,
+  "win_count": 2,
+  "win_rate": 33.33,
+  "total_pnl": -0.032571,
+  "avg_pnl": -0.005428,
+  "best_trade": 0.096906,
+  "worst_trade": -0.096572,
+  "profit_factor": 0.8292,
+  "total_fees": 0.021605,
+  "net_pnl": -0.032571,
   "open_positions": 0,
   "symbols_traded": [
     "ETHUSDT-10APR26",
-    "ETHUSDT-17APR26"
+    "EDGEUSDT",
+    "CFGUSDT"
   ],
-  "symbols_count": 2
+  "symbols_count": 3
 }

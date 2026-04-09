@@ -2,21 +2,20 @@
   "team": "alpha",
   "cycle": 1,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T09:38:03.448220+00:00",
-  "total_trades": 2,
-  "win_count": 0,
-  "win_rate": 0.0,
-  "total_pnl": -0.022881,
-  "avg_pnl": -0.01144,
-  "best_trade": -0.001275,
-  "worst_trade": -0.021605,
-  "profit_factor": 0.0,
-  "total_fees": 0.007212,
-  "net_pnl": -0.022881,
-  "open_positions": 3,
+  "timestamp": "2026-04-09T00:54:25.579986+00:00",
+  "total_trades": 1,
+  "win_count": 1,
+  "win_rate": 100.0,
+  "total_pnl": 0.022593,
+  "avg_pnl": 0.022593,
+  "best_trade": 0.022593,
+  "worst_trade": 0.022593,
+  "profit_factor": "inf",
+  "total_fees": 0.003621,
+  "net_pnl": 0.022593,
+  "open_positions": 0,
   "symbols_traded": [
-    "ETHUSDT-29MAY26",
-    "KATUSDT"
+    "EDGEUSDT"
   ],
-  "symbols_count": 2
+  "symbols_count": 1
 }

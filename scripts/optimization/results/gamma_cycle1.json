@@ -2,20 +2,20 @@
   "team": "gamma",
   "cycle": 1,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T09:38:03.448989+00:00",
+  "timestamp": "2026-04-09T00:54:25.580779+00:00",
   "total_trades": 1,
   "win_count": 1,
   "win_rate": 100.0,
-  "total_pnl": 0.002547,
-  "avg_pnl": 0.002547,
-  "best_trade": 0.002547,
-  "worst_trade": 0.002547,
+  "total_pnl": 0.028433,
+  "avg_pnl": 0.028433,
+  "best_trade": 0.028433,
+  "worst_trade": 0.028433,
   "profit_factor": "inf",
-  "total_fees": 0.00087,
-  "net_pnl": 0.002547,
-  "open_positions": 2,
+  "total_fees": 0.003575,
+  "net_pnl": 0.028433,
+  "open_positions": 0,
   "symbols_traded": [
-    "BASEDUSDT"
+    "FARTCOINUSDT"
   ],
   "symbols_count": 1
 }
