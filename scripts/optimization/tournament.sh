@@ -7,7 +7,7 @@
 # Usage: ./scripts/optimization/tournament.sh [cycle_minutes]
 # Default cycle: 30 minutes (5분봉 최소 6개 수집 가능)
 #
-# Deadline: 2026-04-08 18:00 KST
+# Deadline: 2026-04-09 09:00 KST
 # ============================================================
 
 set -e
@@ -15,7 +15,7 @@ cd "$(dirname "$0")/../.."
 
 CYCLE_MINUTES="${1:-30}"
 # System timezone is KST
-DEADLINE_KST="2026-04-08 18:00:00"
+DEADLINE_KST="2026-04-09 09:00:00"
 DEADLINE_TS=$(date -d "$DEADLINE_KST" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$DEADLINE_KST" +%s 2>/dev/null)
 REPORT_RESERVE_MINUTES=20
 RESULTS_DIR="scripts/optimization/results"

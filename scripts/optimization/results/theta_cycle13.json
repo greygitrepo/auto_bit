@@ -1,0 +1,29 @@
+{
+  "team": "theta",
+  "cycle": 13,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T15:52:04.443468+00:00",
+  "total_trades": 19,
+  "win_count": 2,
+  "win_rate": 10.53,
+  "total_pnl": -0.300349,
+  "avg_pnl": -0.015808,
+  "best_trade": 0.095465,
+  "worst_trade": -0.088275,
+  "profit_factor": 0.3886,
+  "total_fees": 0.068246,
+  "net_pnl": -0.300349,
+  "open_positions": 0,
+  "symbols_traded": [
+    "FARTCOINUSDT",
+    "XAUTUSDT",
+    "REDUSDT",
+    "CLUSDT",
+    "SIRENUSDT",
+    "NOMUSDT",
+    "XAGUSDT",
+    "HYPEUSDT",
+    "RIVERUSDT"
+  ],
+  "symbols_count": 9
+}

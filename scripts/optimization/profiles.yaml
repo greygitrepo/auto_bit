@@ -68,62 +68,40 @@ beta:
   strategy_type: breakout_scalper
 delta:
   asset:
-    consecutive_loss_cooldown_after: 6
-    consecutive_loss_stop_after: 16
-    max_daily_loss_pct: 40.0
-    max_daily_trades: 500
-  exit:
-    grid_timeout_hours: 10
-    hard_stop_loss_pct: 8.0
-  grid:
-    adaptive_levels:
-      enabled: true
-      max_levels: 10
-      min_levels: 3
-      target_spacing_pct: 0.6
-    bias:
-      btc_eth_weight: 0.5
-      ema_weight: 0.5
-      enabled: true
-      funding_rate:
-        enabled: false
-        weight: 0.0
-      max_level_shift: 3
-      threshold: 0.1
-    dynamic_spacing:
-      atr_lookback_hours: 8
-      enabled: true
-      high_vol_multiplier: 2.2
-      low_vol_multiplier: 0.5
-      vol_ratio_high_threshold: 2.5
-      vol_ratio_low_threshold: 0.3
-    leverage: 5
-    max_drawdown_pct: 28.0
-    max_open_levels: 5
-    max_range_pct: 12.0
-    max_symbols: 9
-    min_range_pct: 1.5
-    min_spacing_pct: 0.55
-    mtf:
-      conflicting_reduce_levels: 3
-      enabled: true
-      range_spacing_multiplier: 0.8
-      require_15m_alignment: false
-      require_1h_alignment: false
-      trend_spacing_multiplier: 1.5
-      weight_15m: 0.3
-      weight_1h: 0.2
-      weight_5m: 0.5
-    qty_per_level_pct: 0.92
-    range_atr_multiplier: 2.0
-    recenter_interval_minutes: 60
-    recenter_threshold_pct: 3.5
+    consecutive_loss_cooldown_after: 4
+    consecutive_loss_stop_after: 10
+    max_daily_loss_pct: 25.0
+    max_daily_trades: 300
+  exit_params:
+    stop_loss:
+      atr_multiplier: 1.5
+      atr_period: 14
+      max_pct: 2.0
+      min_pct: 0.3
+    strategy_exit:
+      ema_cross_exit: false
+      rsi_reversal_exit: true
+      volume_dry_exit: false
+    take_profit:
+      risk_reward_ratio: 1.5
+    time_limit:
+      max_holding_minutes: 60
+      warning_minutes: 50
+    trailing_stop:
+      activation_r: 0.6
+      callback_atr_multiplier: 0.5
   scanner:
-    max_candidates: 50
-    max_days_since_listed: 30
-    min_24h_turnover_usdt: 891451
-    min_score: 5
-  strategy_type: grid_bias
+    max_candidates: 30
+    max_days_since_listed: 365
+    min_24h_turnover_usdt: 7176135
+    min_score: 24
+  strategy_params:
+    bb_period: 17.3185
+    bb_squeeze_threshold: 0.0206
+    bb_std: 1.7692
+    min_confidence: 0.5014
+    volume_multiplier: 1.4544
+  strategy_type: breakout_scalper
 epsilon:
   asset:
     consecutive_loss_cooldown_after: 5
@@ -193,62 +171,38 @@ eta:
   strategy_type: ema_crossover
 gamma:
   asset:
-    consecutive_loss_cooldown_after: 6
-    consecutive_loss_stop_after: 16
-    max_daily_loss_pct: 40.0
-    max_daily_trades: 500
-  exit:
-    grid_timeout_hours: 10
-    hard_stop_loss_pct: 8.0
-  grid:
-    adaptive_levels:
-      enabled: true
-      max_levels: 10
-      min_levels: 3
-      target_spacing_pct: 0.6
-    bias:
-      btc_eth_weight: 0.5
-      ema_weight: 0.5
-      enabled: true
-      funding_rate:
-        enabled: false
-        weight: 0.0
-      max_level_shift: 3
-      threshold: 0.1
-    dynamic_spacing:
-      atr_lookback_hours: 8
-      enabled: true
-      high_vol_multiplier: 2.2
-      low_vol_multiplier: 0.5
-      vol_ratio_high_threshold: 2.5
-      vol_ratio_low_threshold: 0.3
-    leverage: 4
-    max_drawdown_pct: 28.0
-    max_open_levels: 4
-    max_range_pct: 12.0
-    max_symbols: 9
-    min_range_pct: 1.5
-    min_spacing_pct: 0.69
-    mtf:
-      conflicting_reduce_levels: 3
-      enabled: true
-      range_spacing_multiplier: 0.8
-      require_15m_alignment: false
-      require_1h_alignment: false
-      trend_spacing_multiplier: 1.5
-      weight_15m: 0.3
-      weight_1h: 0.2
-      weight_5m: 0.5
-    qty_per_level_pct: 0.91
-    range_atr_multiplier: 1.91
-    recenter_interval_minutes: 60
-    recenter_threshold_pct: 3.5
+    consecutive_loss_cooldown_after: 3
+    consecutive_loss_stop_after: 8
+    max_daily_loss_pct: 20.0
+    max_daily_trades: 200
+  exit_params:
+    stop_loss:
+      atr_multiplier: 1.2
+      atr_period: 14
+      max_pct: 1.5
+      min_pct: 0.2
+    strategy_exit:
+      rsi_reversal_exit: true
+    take_profit:
+      risk_reward_ratio: 1.2
+    time_limit:
+      max_holding_minutes: 30
+      warning_minutes: 25
+    trailing_stop:
+      activation_r: 0.4
+      callback_atr_multiplier: 0.4
   scanner:
-    max_candidates: 50
-    max_days_since_listed: 30
-    min_24h_turnover_usdt: 538248
-    min_score: 4
-  strategy_type: grid_bias
+    max_candidates: 20
+    max_days_since_listed: 730
+    min_24h_turnover_usdt: 10840556
+    min_score: 40
+  strategy_params:
+    bb_period: 17.6341
+    bb_squeeze_threshold: 0.0131
+    bb_std: 2.0222
+    min_confidence: 0.5812
+    volume_multiplier: 1.5652
+  strategy_type: breakout_scalper
 iota:
   asset:
     consecutive_loss_cooldown_after: 5

@@ -2,22 +2,21 @@
   "team": "theta",
   "cycle": 2,
   "duration_minutes": 30,
-  "timestamp": "2026-04-08T06:10:44.555888+00:00",
-  "total_trades": 5,
-  "win_count": 0,
-  "win_rate": 0.0,
-  "total_pnl": -0.133142,
-  "avg_pnl": -0.026628,
-  "best_trade": -0.019406,
-  "worst_trade": -0.048243,
-  "profit_factor": 0.0,
-  "total_fees": 0.017958,
-  "net_pnl": -0.133142,
+  "timestamp": "2026-04-08T10:09:13.475667+00:00",
+  "total_trades": 2,
+  "win_count": 1,
+  "win_rate": 50.0,
+  "total_pnl": 0.072339,
+  "avg_pnl": 0.03617,
+  "best_trade": 0.095465,
+  "worst_trade": -0.023126,
+  "profit_factor": 4.1281,
+  "total_fees": 0.007142,
+  "net_pnl": 0.072339,
   "open_positions": 0,
   "symbols_traded": [
-    "XAUTUSDT",
-    "XAGUSDT",
-    "XPLUSDT"
+    "REDUSDT",
+    "XAUTUSDT"
   ],
-  "symbols_count": 3
+  "symbols_count": 2
 }

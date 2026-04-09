@@ -1,0 +1,33 @@
+{
+  "team": "eta",
+  "cycle": 11,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T14:49:44.334987+00:00",
+  "total_trades": 15,
+  "win_count": 2,
+  "win_rate": 13.33,
+  "total_pnl": -0.508851,
+  "avg_pnl": -0.033923,
+  "best_trade": 0.08337,
+  "worst_trade": -0.156686,
+  "profit_factor": 0.1547,
+  "total_fees": 0.054094,
+  "net_pnl": -0.508851,
+  "open_positions": 1,
+  "symbols_traded": [
+    "4USDT",
+    "NOMUSDT",
+    "BEATUSDT",
+    "SOLVUSDT",
+    "VIRTUALUSDT",
+    "BLUAIUSDT",
+    "ESPUSDT",
+    "VVVUSDT",
+    "SIRENUSDT",
+    "ZROUSDT",
+    "HYPEUSDT",
+    "PIPPINUSDT",
+    "LABUSDT"
+  ],
+  "symbols_count": 13
+}

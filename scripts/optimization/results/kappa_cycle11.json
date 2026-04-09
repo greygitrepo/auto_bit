@@ -1,0 +1,31 @@
+{
+  "team": "kappa",
+  "cycle": 11,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T14:49:44.336006+00:00",
+  "total_trades": 59,
+  "win_count": 7,
+  "win_rate": 11.86,
+  "total_pnl": -1.319913,
+  "avg_pnl": -0.022371,
+  "best_trade": 0.079088,
+  "worst_trade": -0.087721,
+  "profit_factor": 0.128,
+  "total_fees": 0.212218,
+  "net_pnl": -1.319913,
+  "open_positions": 0,
+  "symbols_traded": [
+    "BSBUSDT",
+    "XAUUSDT",
+    "CLUSDT",
+    "EDGEUSDT",
+    "OPNUSDT",
+    "CFGUSDT",
+    "KATUSDT",
+    "XAGUSDT",
+    "ESPUSDT",
+    "BASEDUSDT",
+    "PRLUSDT"
+  ],
+  "symbols_count": 11
+}

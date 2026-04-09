@@ -5,7 +5,7 @@ strategies:
       cooldown_after_sl_hours: 1
       volume_decline_threshold: 0.2
     liquidity:
-      min_24h_turnover_usdt: 10000000
+      min_24h_turnover_usdt: 10840556
     listing:
       max_days_since_listed: 730
       min_days_since_listed: 1
@@ -20,11 +20,11 @@ strategies:
       rsi_exclude_below: 10
       rsi_period: 14
     pool:
-      max_candidates: 58
+      max_candidates: 20
     scoring:
       listing_recency_weight: 0.0
       market_env_weight: 0.15
-      min_score: 17
+      min_score: 40
       momentum_weight: 0.2
       volatility_weight: 0.3
       volume_weight: 0.35

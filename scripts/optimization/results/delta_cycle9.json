@@ -1,0 +1,33 @@
+{
+  "team": "delta",
+  "cycle": 9,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T13:47:24.128886+00:00",
+  "total_trades": 17,
+  "win_count": 3,
+  "win_rate": 17.65,
+  "total_pnl": -0.493134,
+  "avg_pnl": -0.029008,
+  "best_trade": 0.053229,
+  "worst_trade": -0.132672,
+  "profit_factor": 0.1894,
+  "total_fees": 0.061186,
+  "net_pnl": -0.493134,
+  "open_positions": 1,
+  "symbols_traded": [
+    "MUSDT",
+    "BEATUSDT",
+    "PUMPFUNUSDT",
+    "KITEUSDT",
+    "NOMUSDT",
+    "4USDT",
+    "PLAYSOUTUSDT",
+    "XAUUSDT",
+    "XAGUSDT",
+    "ASTERUSDT",
+    "BASEDUSDT",
+    "BARDUSDT",
+    "MONUSDT"
+  ],
+  "symbols_count": 13
+}

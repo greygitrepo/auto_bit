@@ -1,199 +1,200 @@
 ============================================================
   AUTO_BIT OPTIMIZATION TOURNAMENT - FINAL REPORT
-  Generated: 2026-04-08 08:15:41 UTC
+  Generated: 2026-04-08 23:08:35 UTC
 ============================================================
 
   Team ALPHA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    123
-  Win Rate:        78.86%
-  Total P&L:       -0.867285 USDT
-  P&L/Hour:        -0.289095 USDT
-  Avg P&L/Trade:   -0.007051 USDT
-  Total Fees:      0.320847 USDT
-  Symbols Traded:  23
-  Best Cycle:      0.037454 USDT
-  Worst Cycle:     -0.426432 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    1245
+  Win Rate:        11.81%
+  Total P&L:       -27.747251 USDT
+  P&L/Hour:        -2.055352 USDT
+  Avg P&L/Trade:   -0.022287 USDT
+  Total Fees:      4.480946 USDT
+  Symbols Traded:  18
+  Best Cycle:      -0.022881 USDT
+  Worst Cycle:     -1.991301 USDT
 
   Team BETA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    78
-  Win Rate:        19.23%
-  Total P&L:       -0.652139 USDT
-  P&L/Hour:        -0.217380 USDT
-  Avg P&L/Trade:   -0.008361 USDT
-  Total Fees:      0.280143 USDT
-  Symbols Traded:  14
-  Best Cycle:      0.058431 USDT
-  Worst Cycle:     -0.351681 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    1361
+  Win Rate:        16.61%
+  Total P&L:       -26.682439 USDT
+  P&L/Hour:        -1.976477 USDT
+  Avg P&L/Trade:   -0.019605 USDT
+  Total Fees:      4.902285 USDT
+  Symbols Traded:  22
+  Best Cycle:      0.088725 USDT
+  Worst Cycle:     -2.146166 USDT
 
   Team DELTA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    15
-  Win Rate:        46.67%
-  Total P&L:       -0.398118 USDT
-  P&L/Hour:        -0.132706 USDT
-  Avg P&L/Trade:   -0.026541 USDT
-  Total Fees:      0.036322 USDT
-  Symbols Traded:  6
-  Best Cycle:      0.020910 USDT
-  Worst Cycle:     -0.104757 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    1040
+  Win Rate:        24.33%
+  Total P&L:       -21.760524 USDT
+  P&L/Hour:        -1.611891 USDT
+  Avg P&L/Trade:   -0.020924 USDT
+  Total Fees:      3.723675 USDT
+  Symbols Traded:  22
+  Best Cycle:      0.003791 USDT
+  Worst Cycle:     -1.677027 USDT
 
   Team EPSILON
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    62
-  Win Rate:        6.45%
-  Total P&L:       -2.508756 USDT
-  P&L/Hour:        -0.836252 USDT
-  Avg P&L/Trade:   -0.040464 USDT
-  Total Fees:      0.222973 USDT
-  Symbols Traded:  9
-  Best Cycle:      -0.223294 USDT
-  Worst Cycle:     -0.558944 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    1543
+  Win Rate:        9.53%
+  Total P&L:       -30.240078 USDT
+  P&L/Hour:        -2.240006 USDT
+  Avg P&L/Trade:   -0.019598 USDT
+  Total Fees:      5.552075 USDT
+  Symbols Traded:  10
+  Best Cycle:      0.000000 USDT
+  Worst Cycle:     -2.041370 USDT
 
   Team ETA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    54
-  Win Rate:        100.0%
-  Total P&L:       0.182633 USDT
-  P&L/Hour:        0.060878 USDT
-  Avg P&L/Trade:   0.003382 USDT
-  Total Fees:      0.077247 USDT
-  Symbols Traded:  3
-  Best Cycle:      0.037423 USDT
-  Worst Cycle:     0.000000 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    471
+  Win Rate:        12.53%
+  Total P&L:       -11.718079 USDT
+  P&L/Hour:        -0.868006 USDT
+  Avg P&L/Trade:   -0.024879 USDT
+  Total Fees:      1.695066 USDT
+  Symbols Traded:  25
+  Best Cycle:      0.000000 USDT
+  Worst Cycle:     -0.825438 USDT
 
   Team GAMMA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    12
-  Win Rate:        66.67%
-  Total P&L:       0.005378 USDT
-  P&L/Hour:        0.001793 USDT
-  Avg P&L/Trade:   0.000448 USDT
-  Total Fees:      0.021423 USDT
-  Symbols Traded:  4
-  Best Cycle:      0.019838 USDT
-  Worst Cycle:     -0.003615 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    436
+  Win Rate:        13.53%
+  Total P&L:       -9.573226 USDT
+  P&L/Hour:        -0.709128 USDT
+  Avg P&L/Trade:   -0.021957 USDT
+  Total Fees:      1.555426 USDT
+  Symbols Traded:  12
+  Best Cycle:      0.002547 USDT
+  Worst Cycle:     -0.648577 USDT
 
   Team IOTA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    125
-  Win Rate:        22.4%
-  Total P&L:       -4.093553 USDT
-  P&L/Hour:        -1.364518 USDT
-  Avg P&L/Trade:   -0.032748 USDT
-  Total Fees:      0.449426 USDT
-  Symbols Traded:  19
-  Best Cycle:      -0.190648 USDT
-  Worst Cycle:     -1.012647 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    2023
+  Win Rate:        22.84%
+  Total P&L:       -33.861212 USDT
+  P&L/Hour:        -2.508238 USDT
+  Avg P&L/Trade:   -0.016738 USDT
+  Total Fees:      7.292446 USDT
+  Symbols Traded:  44
+  Best Cycle:      -0.021944 USDT
+  Worst Cycle:     -2.206324 USDT
 
   Team KAPPA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    114
-  Win Rate:        23.68%
-  Total P&L:       -2.927579 USDT
-  P&L/Hour:        -0.975860 USDT
-  Avg P&L/Trade:   -0.025681 USDT
-  Total Fees:      0.410404 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    1776
+  Win Rate:        14.25%
+  Total P&L:       -40.453718 USDT
+  P&L/Hour:        -2.996572 USDT
+  Avg P&L/Trade:   -0.022778 USDT
+  Total Fees:      6.387725 USDT
   Symbols Traded:  11
-  Best Cycle:      -0.356620 USDT
-  Worst Cycle:     -0.598590 USDT
+  Best Cycle:      -0.056927 USDT
+  Worst Cycle:     -2.727388 USDT
 
   Team THETA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    46
-  Win Rate:        0.0%
-  Total P&L:       -1.790988 USDT
-  P&L/Hour:        -0.596996 USDT
-  Avg P&L/Trade:   -0.038935 USDT
-  Total Fees:      0.165172 USDT
-  Symbols Traded:  6
-  Best Cycle:      -0.042761 USDT
-  Worst Cycle:     -0.512216 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    609
+  Win Rate:        18.06%
+  Total P&L:       -10.530209 USDT
+  P&L/Hour:        -0.780015 USDT
+  Avg P&L/Trade:   -0.017291 USDT
+  Total Fees:      2.187111 USDT
+  Symbols Traded:  12
+  Best Cycle:      0.072339 USDT
+  Worst Cycle:     -0.786716 USDT
 
   Team ZETA
   ────────────────────────────────────────
-  Cycles:          6
-  Total Time:      180 min
-  Total Trades:    108
-  Win Rate:        31.48%
-  Total P&L:       -2.354474 USDT
-  P&L/Hour:        -0.784825 USDT
-  Avg P&L/Trade:   -0.021801 USDT
-  Total Fees:      0.389041 USDT
-  Symbols Traded:  20
-  Best Cycle:      -0.034001 USDT
-  Worst Cycle:     -0.755914 USDT
+  Cycles:          27
+  Total Time:      810 min
+  Total Trades:    2505
+  Win Rate:        20.0%
+  Total P&L:       -68.280501 USDT
+  P&L/Hour:        -5.057815 USDT
+  Avg P&L/Trade:   -0.027258 USDT
+  Total Fees:      8.925654 USDT
+  Symbols Traded:  51
+  Best Cycle:      -0.122850 USDT
+  Worst Cycle:     -4.905299 USDT
 
   COMPARISON TABLE
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   Metric                 Alpha      Beta     Gamma     Delta   Epsilon      Zeta       Eta     Theta      Iota     Kappa
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  Trades                  123        78        12        15        62       108        54        46       125       114
-  Win Rate %          78.8600   19.2300   66.6700   46.6700    6.4500   31.4800  100.0000    0.0000   22.4000   23.6800
-  Total PnL           -0.8673   -0.6521    0.0054   -0.3981   -2.5088   -2.3545    0.1826   -1.7910   -4.0936   -2.9276
-  PnL/Hour            -0.2891   -0.2174    0.0018   -0.1327   -0.8363   -0.7848    0.0609   -0.5970   -1.3645   -0.9759
-  Avg PnL/Trade       -0.0071   -0.0084    0.0004   -0.0265   -0.0405   -0.0218    0.0034   -0.0389   -0.0327   -0.0257
-  Fees                 0.3208    0.2801    0.0214    0.0363    0.2230    0.3890    0.0772    0.1652    0.4494    0.4104
-  Symbols                  23        14         4         6         9        20         3         6        19        11
+  Trades                 1245      1361       436      1040      1543      2505       471       609      2023      1776
+  Win Rate %          11.8100   16.6100   13.5300   24.3300    9.5300   20.0000   12.5300   18.0600   22.8400   14.2500
+  Total PnL          -27.7473  -26.6824   -9.5732  -21.7605  -30.2401  -68.2805  -11.7181  -10.5302  -33.8612  -40.4537
+  PnL/Hour            -2.0554   -1.9765   -0.7091   -1.6119   -2.2400   -5.0578   -0.8680   -0.7800   -2.5082   -2.9966
+  Avg PnL/Trade       -0.0223   -0.0196   -0.0220   -0.0209   -0.0196   -0.0273   -0.0249   -0.0173   -0.0167   -0.0228
+  Fees                 4.4809    4.9023    1.5554    3.7237    5.5521    8.9257    1.6951    2.1871    7.2924    6.3877
+  Symbols                  18        22        12        22        10        51        25        12        44        11
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  WINNER: Team ETA
-  Total P&L: 0.182633 USDT
-  Win Rate: 100.0%
-  P&L/Hour: 0.060878 USDT
+  WINNER: Team GAMMA
+  Total P&L: -9.573226 USDT
+  Win Rate: 13.53%
+  P&L/Hour: -0.709128 USDT
 
-  WINNING PARAMETERS (Team ETA):
+  WINNING PARAMETERS (Team GAMMA):
   ────────────────────────────────────────
 asset:
     consecutive_loss_cooldown_after: 3
     consecutive_loss_stop_after: 8
-    max_daily_loss_pct: 40
-    max_daily_trades: 600
+    max_daily_loss_pct: 20.0
+    max_daily_trades: 200
 exit_params:
     stop_loss:
-        atr_multiplier: 2.2
+        atr_multiplier: 1.2
         atr_period: 14
-        max_pct: 2.4
-        min_pct: 0.3
+        max_pct: 1.5
+        min_pct: 0.2
+    strategy_exit:
+        rsi_reversal_exit: true
     take_profit:
-        risk_reward_ratio: 2.1
+        risk_reward_ratio: 1.2
     time_limit:
-        max_holding_minutes: 60
+        max_holding_minutes: 30
         warning_minutes: 25
     trailing_stop:
-        activation_r: 0.5
-        callback_atr_multiplier: 0.6
+        activation_r: 0.4
+        callback_atr_multiplier: 0.4
 scanner:
-    max_candidates: 58
+    max_candidates: 20
     max_days_since_listed: 730
-    min_24h_turnover_usdt: 10000000
-    min_score: 17
+    min_24h_turnover_usdt: 10840556
+    min_score: 40
 strategy_params:
-    adx_threshold: 23
-    ema_fast: 5
-    ema_slow: 25
-    min_confidence: 0.5
-    require_adx: true
-    volume_multiplier: 1.1
-strategy_type: ema_crossover
+    bb_period: 17.6341
+    bb_squeeze_threshold: 0.0131
+    bb_std: 2.0222
+    min_confidence: 0.5812
+    volume_multiplier: 1.5652
+strategy_type: breakout_scalper
 
 ============================================================

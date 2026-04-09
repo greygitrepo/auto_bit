@@ -1,0 +1,30 @@
+{
+  "team": "gamma",
+  "cycle": 15,
+  "duration_minutes": 30,
+  "timestamp": "2026-04-08T16:54:24.525579+00:00",
+  "total_trades": 16,
+  "win_count": 1,
+  "win_rate": 6.25,
+  "total_pnl": -0.479172,
+  "avg_pnl": -0.029948,
+  "best_trade": 0.095465,
+  "worst_trade": -0.095991,
+  "profit_factor": 0.1661,
+  "total_fees": 0.057421,
+  "net_pnl": -0.479172,
+  "open_positions": 0,
+  "symbols_traded": [
+    "EDGEUSDT",
+    "RIVERUSDT",
+    "FARTCOINUSDT",
+    "XAUTUSDT",
+    "REDUSDT",
+    "CLUSDT",
+    "SIRENUSDT",
+    "NOMUSDT",
+    "XAGUSDT",
+    "HYPEUSDT"
+  ],
+  "symbols_count": 10
+}
