@@ -15,7 +15,7 @@ cd "$(dirname "$0")/../.."
 
 CYCLE_MINUTES="${1:-30}"
 # System timezone is KST
-DEADLINE_KST="2026-04-09 09:00:00"
+DEADLINE_KST="2026-04-09 18:00:00"
 DEADLINE_TS=$(date -d "$DEADLINE_KST" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$DEADLINE_KST" +%s 2>/dev/null)
 REPORT_RESERVE_MINUTES=20
 RESULTS_DIR="scripts/optimization/results"
