@@ -70,3 +70,13 @@ min_spacing 0.6% < 왕복 비용 0.71% (fee 0.055%×2 + slippage 30bps×2)
 ### 6. DB PnL 기록 부정확 (타이밍) — ✅ 수정 완료
 - **원인**: 청산 직후 get_closed_pnl 호출 시 Bybit에 아직 반영 안 됨 (0.3초 대기 부족)
 - **수정**: 대기 시간 0.3초 → 1.0초, limit 5 → 10
+
+### 7. API Rate Limit 히스토리 로딩 시 (MINOR) — ✅ 완화
+- pybit 자동 재시도로 치명적이지 않으나, 로딩 간격 0.2→0.35초로 확대
+
+### 8. set_leverage "not modified" (110043) 주문 실패 — ✅ 수정 완료
+```
+Order execution failed: set_leverage failed after 3 retries: leverage not modified (ErrCode: 110043)
+```
+- **원인**: 레버리지 이미 동일 값. pybit exception → _retry 3회 → raise → 주문 자체 실패
+- **수정**: set_leverage에서 @_retry 제거, 110043 내부 catch

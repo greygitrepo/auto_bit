@@ -529,32 +529,30 @@ class BybitClient:
     # Leverage / margin configuration (auth required)
     # ==================================================================
 
-    @_retry()
     def set_leverage(self, symbol: str, leverage: str) -> Dict[str, Any]:
         """Set the leverage for a symbol.
 
-        Parameters
-        ----------
-        symbol:
-            Trading pair, e.g. ``"BTCUSDT"``.
-        leverage:
-            Leverage multiplier as a string, e.g. ``"10"``.
-
-        Returns
-        -------
-        Empty dict on success (Bybit returns no body).
+        No @_retry — handles 'already set' errors internally.
         """
         self._require_auth()
         logger.debug("set_leverage: symbol={} leverage={}", symbol, leverage)
-        raw = self._http.set_leverage(
-            category=self.CATEGORY,
-            symbol=symbol,
-            buyLeverage=leverage,
-            sellLeverage=leverage,
-        )
-        result = self._parse_response(raw, "set_leverage")
-        logger.debug("set_leverage: done for {}", symbol)
-        return result if result else {}
+        try:
+            raw = self._http.set_leverage(
+                category=self.CATEGORY,
+                symbol=symbol,
+                buyLeverage=leverage,
+                sellLeverage=leverage,
+            )
+            result = self._parse_response(raw, "set_leverage")
+            logger.debug("set_leverage: done for {}", symbol)
+            return result if result else {}
+        except Exception as exc:
+            exc_str = str(exc)
+            # 110043 = leverage not modified (already set)
+            if "110043" in exc_str:
+                logger.debug("set_leverage skipped for {} (already {}x)", symbol, leverage)
+                return {}
+            raise
 
     def set_margin_mode(
         self, symbol: str, mode: str = "ISOLATED_MARGIN", leverage: int = 1

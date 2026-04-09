@@ -995,4 +995,4 @@ class StrategyEngineProcess(multiprocessing.Process):
         )
 
         # Throttle API calls to avoid rate limiting during bulk history load
-        time.sleep(0.2)
+        time.sleep(0.35)
