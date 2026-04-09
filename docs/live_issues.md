@@ -38,3 +38,11 @@ Grid TP executed: BSBUSDT idx=-3 pnl=0.000000 fee=0.000000
 - 펀딩비 영향
 - 네트워크/API 지연에 의한 주문 실패
 - 동시 다수 심볼 주문 시 rate limit
+
+### 3. BybitClient.set_margin_mode retry 3회 후 에러 전파 — ✅ 수정 완료
+```
+ERROR: set_margin_mode failed after 3 retries: unified account is forbidden (ErrCode: 100028)
+```
+- **원인**: LiveExecutor에서 100028을 catch하기 전에 BybitClient의 _retry 데코레이터가 3회 재시도 후 raise
+- **영향**: OrderManager.execute_order에서 에러 전파 → Position 전략 주문 실패
+- **수정**: BybitClient.set_margin_mode 내부에서 100028/110026 에러를 catch하여 즉시 반환

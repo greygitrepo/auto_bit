@@ -585,16 +585,24 @@ class BybitClient:
             trade_mode,
             leverage,
         )
-        raw = self._http.switch_margin_mode(
-            category=self.CATEGORY,
-            symbol=symbol,
-            tradeMode=trade_mode,
-            buyLeverage=str(leverage),
-            sellLeverage=str(leverage),
-        )
-        result = self._parse_response(raw, "set_margin_mode")
-        logger.debug("set_margin_mode: done for {}", symbol)
-        return result if result else {}
+        try:
+            raw = self._http.switch_margin_mode(
+                category=self.CATEGORY,
+                symbol=symbol,
+                tradeMode=trade_mode,
+                buyLeverage=str(leverage),
+                sellLeverage=str(leverage),
+            )
+            result = self._parse_response(raw, "set_margin_mode")
+            logger.debug("set_margin_mode: done for {}", symbol)
+            return result if result else {}
+        except BybitAPIError as exc:
+            # 100028 = Unified Trading Account (margin mode not applicable)
+            # 110026 = margin mode not modified (already set)
+            if exc.ret_code in (100028, 110026):
+                logger.debug("set_margin_mode skipped for {} (code={})", symbol, exc.ret_code)
+                return {}
+            raise
 
     # ==================================================================
     # Execution / fill endpoints (auth required)
