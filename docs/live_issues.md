@@ -80,3 +80,11 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
 ```
 - **원인**: 레버리지 이미 동일 값. pybit exception → _retry 3회 → raise → 주문 자체 실패
 - **수정**: set_leverage에서 @_retry 제거, 110043 내부 catch
+
+### 9. SL/TP 조건부 주문 Qty invalid (10001) — ✅ 수정 완료
+- **원인**: set_sl_tp에서 qty를 _round_qty 없이 전달 → qtyStep 불일치
+- **수정**: set_sl_tp 시작 시 qty = _round_qty(symbol, qty) 적용
+
+### 10. Live 최소 주문 금액 5 USDT 미달 (110094) — ✅ 수정 완료
+- **원인**: LiveExecutor.place_market_order에 min notional 체크 없음
+- **수정**: 주문 전 notional 계산 후 minNotionalValue 미만이면 reject 반환

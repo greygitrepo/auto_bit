@@ -153,6 +153,16 @@ class LiveExecutor:
         except Exception:
             current_price = 0.0
 
+        # Check minimum notional value (5 USDT)
+        if current_price > 0:
+            info = self._get_instrument_info(symbol)
+            lot_filter = info.get("lotSizeFilter", {})
+            min_notional = float(lot_filter.get("minNotionalValue", "5"))
+            notional = qty * current_price
+            if notional < min_notional:
+                logger.info("Live REJECT {}: notional {:.2f} < min {:.1f}", symbol, notional, min_notional)
+                return {"rejected": True, "reason": "below_min_notional", "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+
         result = await self._run_sync(
             self.client.place_order,
             symbol=symbol,
@@ -234,6 +244,7 @@ class LiveExecutor:
         Dict with ``slOrderId`` and ``tpOrderId``.
         """
         close_side = "Sell" if side == "Buy" else "Buy"
+        qty = self._round_qty(symbol, qty)
         sl_price = self._round_price(symbol, sl_price)
         tp_price = self._round_price(symbol, tp_price)
 
