@@ -90,16 +90,17 @@ class LiveExecutor:
             Desired leverage multiplier.
         """
         # Set isolated margin mode.
+        # Skip for Unified Trading Accounts (ErrCode 100028).
         try:
             await self._run_sync(
                 self.client.set_margin_mode, symbol, "ISOLATED"
             )
             logger.info("Set margin mode to ISOLATED for {}", symbol)
         except BybitAPIError as exc:
-            # ret_code 110026 = "margin mode is not modified" (already set).
-            if exc.ret_code == 110026:
+            if exc.ret_code in (110026, 100028):
+                # 110026 = already set, 100028 = UTA (not applicable)
                 logger.debug(
-                    "Margin mode already ISOLATED for {}", symbol
+                    "Margin mode skip for {} (code={})", symbol, exc.ret_code
                 )
             else:
                 raise
@@ -358,12 +359,39 @@ class LiveExecutor:
                 fill_price = current_price
         result["fillPrice"] = fill_price if fill_price > 0 else current_price
 
+        # Fetch actual PnL and fee from executions
+        pnl = 0.0
+        fee = 0.0
+        if order_id:
+            try:
+                import time as _time2
+                _time2.sleep(0.3)
+                executions = await self._run_sync(
+                    self.client.get_executions, symbol, order_id=order_id
+                )
+                for ex in (executions or []):
+                    fee += abs(float(ex.get("execFee", 0)))
+                # Get closed PnL from API
+                closed = await self._run_sync(
+                    self.client.get_closed_pnl, symbol, limit=5
+                )
+                for cp in (closed or []):
+                    if cp.get("orderId") == order_id:
+                        pnl = float(cp.get("closedPnl", 0))
+                        break
+            except Exception as exc:
+                logger.debug("Failed to fetch close PnL for {}: {}", symbol, exc)
+        result["pnl"] = pnl
+        result["fee"] = fee
+
         logger.info(
-            "Live CLOSE: {} {:.6f} {} @ {:.4f} -> orderId={}",
+            "Live CLOSE: {} {:.6f} {} @ {:.4f} pnl={:.6f} fee={:.6f} orderId={}",
             close_side,
             qty,
             symbol,
             result["fillPrice"],
+            pnl,
+            fee,
             result.get("orderId"),
         )
         return result
@@ -447,9 +475,33 @@ class LiveExecutor:
             except Exception:
                 pass
 
+        # Fetch actual PnL and fee
+        pnl = 0.0
+        fee = 0.0
+        if order_id:
+            try:
+                import time as _time3
+                _time3.sleep(0.3)
+                executions = await self._run_sync(
+                    self.client.get_executions, symbol, order_id=order_id
+                )
+                for ex in (executions or []):
+                    fee += abs(float(ex.get("execFee", 0)))
+                closed = await self._run_sync(
+                    self.client.get_closed_pnl, symbol, limit=5
+                )
+                for cp in (closed or []):
+                    if cp.get("orderId") == order_id:
+                        pnl = float(cp.get("closedPnl", 0))
+                        break
+            except Exception as exc:
+                logger.debug("Failed to fetch partial close PnL for {}: {}", symbol, exc)
+        result["pnl"] = pnl
+        result["fee"] = fee
+
         logger.info(
-            "Live CLOSE_PARTIAL: {} {:.6f} {} @ {:.4f} -> orderId={}",
-            close_side, qty, symbol, result["fillPrice"], result.get("orderId"),
+            "Live CLOSE_PARTIAL: {} {:.6f} {} @ {:.4f} pnl={:.6f} fee={:.6f} orderId={}",
+            close_side, qty, symbol, result["fillPrice"], pnl, fee, result.get("orderId"),
         )
         return result
 
