@@ -1,0 +1,7 @@
+# Position 전략(Volatility Breakout)용 스캐너 설정
+# Grid 스캐너(scanner.yaml)와 별도로 운용
+# 유동성 높은 종목에서 방향성 거래
+max_days_since_listed: 730
+min_24h_turnover_usdt: 5000000
+max_candidates: 30
+min_score: 20

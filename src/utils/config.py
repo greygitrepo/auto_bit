@@ -138,6 +138,7 @@ class StrategySection:
     """
 
     scanner: Dict[str, Any] = field(default_factory=dict)
+    scanner_position: Dict[str, Any] = field(default_factory=dict)
     position: Dict[str, Any] = field(default_factory=dict)
     asset: Dict[str, Any] = field(default_factory=dict)
     grid: Dict[str, Any] = field(default_factory=dict)
@@ -332,6 +333,7 @@ class AppConfig:
         # 4. Strategy sub-configs (required)
         strategy_dir = self._config_dir / "strategy"
         scanner_raw = _load_yaml(strategy_dir / "scanner.yaml")
+        scanner_position_raw = _load_yaml_optional(strategy_dir / "scanner_position.yaml")
         position_raw = _load_yaml(strategy_dir / "position.yaml")
         asset_raw = _load_yaml(strategy_dir / "asset.yaml")
         grid_raw = _load_yaml_optional(strategy_dir / "grid.yaml")
@@ -346,6 +348,7 @@ class AppConfig:
         self.credentials: CredentialsSection = _build_credentials(creds_raw)
         self.strategy: StrategySection = StrategySection(
             scanner=scanner_raw,
+            scanner_position=scanner_position_raw,
             position=position_raw,
             asset=asset_raw,
             grid=grid_raw,

@@ -75,6 +75,7 @@ class Orchestrator:
             "asset": self.config.strategy.asset,
             "position": self.config.strategy.position,
             "scanner": self.config.strategy.scanner,
+            "scanner_position": getattr(self.config.strategy, "scanner_position", {}),
             "grid": self.config.strategy.grid,
             "symbols": {
                 "base_symbols": self.config.symbols.base_symbols,
@@ -408,6 +409,7 @@ class Orchestrator:
             "asset": self.config.strategy.asset,
             "position": self.config.strategy.position,
             "scanner": self.config.strategy.scanner,
+            "scanner_position": getattr(self.config.strategy, "scanner_position", {}),
             "grid": self.config.strategy.grid,
             "symbols": {
                 "base_symbols": self.config.symbols.base_symbols,

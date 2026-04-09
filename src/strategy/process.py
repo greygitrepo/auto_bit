@@ -186,11 +186,48 @@ class StrategyEngineProcess(multiprocessing.Process):
         api_secret = self._credentials.get("api_secret") or None
         self._rest_client = BybitClient(api_key=api_key, api_secret=api_secret)
 
-        # --- Scanner ---
+        # --- Scanners (separate for grid and position strategies) ---
+        self._symbol_manager = SymbolManager(self._rest_client)
+
+        # Primary scanner (shared / grid-focused)
         scanner_cfg = self._config.get("scanner", {})
         nl_cfg = scanner_cfg.get("strategies", {}).get("new_listing", {})
-        self._symbol_manager = SymbolManager(self._rest_client)
         self._scanner = NewListingScanner(self._symbol_manager, nl_cfg)
+
+        # Secondary scanner for position strategy (if config exists)
+        scanner_pos_cfg = self._config.get("scanner_position", {})
+        if scanner_pos_cfg:
+            nl_pos_cfg = scanner_pos_cfg.get("strategies", {}).get("new_listing", {})
+            if not nl_pos_cfg:
+                # Shorthand: scanner_position has flat keys like max_days_since_listed
+                # Build the nested structure from flat keys
+                nl_pos_cfg = dict(nl_cfg)  # Start from primary scanner config
+                listing = dict(nl_pos_cfg.get("listing", {}))
+                liquidity = dict(nl_pos_cfg.get("liquidity", {}))
+                pool = dict(nl_pos_cfg.get("pool", {}))
+                scoring = dict(nl_pos_cfg.get("scoring", {}))
+                if "max_days_since_listed" in scanner_pos_cfg:
+                    listing["max_days_since_listed"] = scanner_pos_cfg["max_days_since_listed"]
+                if "min_24h_turnover_usdt" in scanner_pos_cfg:
+                    liquidity["min_24h_turnover_usdt"] = scanner_pos_cfg["min_24h_turnover_usdt"]
+                if "max_candidates" in scanner_pos_cfg:
+                    pool["max_candidates"] = scanner_pos_cfg["max_candidates"]
+                if "min_score" in scanner_pos_cfg:
+                    scoring["min_score"] = scanner_pos_cfg["min_score"]
+                nl_pos_cfg["listing"] = listing
+                nl_pos_cfg["liquidity"] = liquidity
+                nl_pos_cfg["pool"] = pool
+                nl_pos_cfg["scoring"] = scoring
+            self._scanner_position = NewListingScanner(self._symbol_manager, nl_pos_cfg)
+            logger.info("P2 dual scanners: grid={} position={}",
+                        nl_cfg.get("liquidity", {}).get("min_24h_turnover_usdt", "?"),
+                        nl_pos_cfg.get("liquidity", {}).get("min_24h_turnover_usdt", "?"))
+        else:
+            self._scanner_position = None
+
+        # Track which symbols belong to which strategy
+        self._grid_scan_symbols: set[str] = set()
+        self._position_scan_symbols: set[str] = set()
 
         # --- Database ---
         from src.utils.db import DatabaseManager
@@ -427,11 +464,15 @@ class StrategyEngineProcess(multiprocessing.Process):
             timeframe == self._primary_tf
             and symbol in self._active_trading_symbols
         ):
-            # Dual strategy: run grid AND position strategy if both configured
+            # Dual strategy: each strategy only evaluates its own scanner's symbols
             if self._grid_strategy is not None:
-                self._evaluate_grid_strategy(symbol, candle)
+                # Grid: evaluate if symbol is from grid scanner (or no separation configured)
+                if not self._position_scan_symbols or symbol in self._grid_scan_symbols:
+                    self._evaluate_grid_strategy(symbol, candle)
             if self._scalper is not None:
-                self._evaluate_strategy(symbol)
+                # Position: evaluate if symbol is from position scanner (or no separation)
+                if not self._grid_scan_symbols or symbol in self._position_scan_symbols:
+                    self._evaluate_strategy(symbol)
 
     def _evaluate_strategy(self, symbol: str) -> None:
         """Run MomentumScalper on the latest data for *symbol*.
@@ -644,7 +685,7 @@ class StrategyEngineProcess(multiprocessing.Process):
         # 3. Build market_data dict expected by the scanner
         market_data = self._build_scanner_market_data(tickers)
 
-        # 4. Run scanner
+        # 4. Run primary scanner (grid-focused)
         try:
             results = self._scanner.scan(
                 market_data=market_data,
@@ -655,9 +696,37 @@ class StrategyEngineProcess(multiprocessing.Process):
             )
         except Exception as exc:
             logger.error("P2 scanner error: {}", exc)
-            return
+            results = []
 
-        logger.info("P2 scanner returned {} results", len(results))
+        # 4b. Run position scanner (if separate config exists)
+        position_results = []
+        if self._scanner_position is not None:
+            try:
+                position_results = self._scanner_position.scan(
+                    market_data=market_data,
+                    btc_trend=btc_trend,
+                    eth_trend=eth_trend,
+                    open_positions=current_positions,
+                    recent_sl_symbols=self._recent_sl_symbols,
+                )
+            except Exception as exc:
+                logger.error("P2 position scanner error: {}", exc)
+
+        # Track which symbols belong to which scanner
+        for r in results:
+            self._grid_scan_symbols.add(r.symbol)
+        for r in position_results:
+            self._position_scan_symbols.add(r.symbol)
+
+        # Merge results (deduplicate)
+        seen = {r.symbol for r in results}
+        for r in position_results:
+            if r.symbol not in seen:
+                results.append(r)
+                seen.add(r.symbol)
+
+        logger.info("P2 scanner returned {} grid + {} position results",
+                     len(self._grid_scan_symbols), len(self._position_scan_symbols))
 
         # Determine overall market direction
         market_direction = IndicatorEngine.get_market_trend(
