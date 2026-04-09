@@ -365,7 +365,7 @@ class LiveExecutor:
         if order_id:
             try:
                 import time as _time2
-                _time2.sleep(0.3)
+                _time2.sleep(1.0)  # Wait for Bybit to process
                 executions = await self._run_sync(
                     self.client.get_executions, symbol, order_id=order_id
                 )
@@ -373,7 +373,7 @@ class LiveExecutor:
                     fee += abs(float(ex.get("execFee", 0)))
                 # Get closed PnL from API
                 closed = await self._run_sync(
-                    self.client.get_closed_pnl, symbol, limit=5
+                    self.client.get_closed_pnl, symbol, limit=10
                 )
                 for cp in (closed or []):
                     if cp.get("orderId") == order_id:
@@ -386,12 +386,7 @@ class LiveExecutor:
 
         logger.info(
             "Live CLOSE: {} {:.6f} {} @ {:.4f} pnl={:.6f} fee={:.6f} orderId={}",
-            close_side,
-            qty,
-            symbol,
-            result["fillPrice"],
-            pnl,
-            fee,
+            close_side, qty, symbol, result["fillPrice"], pnl, fee,
             result.get("orderId"),
         )
         return result
@@ -481,7 +476,7 @@ class LiveExecutor:
         if order_id:
             try:
                 import time as _time3
-                _time3.sleep(0.3)
+                _time3.sleep(1.0)  # Wait for Bybit to process
                 executions = await self._run_sync(
                     self.client.get_executions, symbol, order_id=order_id
                 )

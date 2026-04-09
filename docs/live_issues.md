@@ -54,3 +54,19 @@ ERROR: set_margin_mode failed after 3 retries: unified account is forbidden (Err
   - `GridPositionManager.restore_from_positions()` 메서드 추가
   - P3 초기화 시 DB의 오픈 포지션(strategy=grid_bias/recovered)을 _level_positions에 복원
   - Live mode에서는 LivePositionLedger에도 복원
+
+### 5. Grid spacing이 실전 비용보다 작음 — ✅ 수정 완료
+```
+min_spacing 0.6% < 왕복 비용 0.71% (fee 0.055%×2 + slippage 30bps×2)
+```
+- **원인**: 페이퍼 슬리피지 15bps 기준으로 설정. 실전 알트코인은 30~50bps
+- **영향**: 모든 Grid TP 거래에서 순손실 발생
+- **수정**: 
+  - min_spacing_pct: 0.6% → 1.0%
+  - target_spacing_pct: 0.6% → 1.0%
+  - paper slippage_bps: 15 → 30
+  - paper taker fee: 0.0006 → 0.00055 (실전과 동일)
+
+### 6. DB PnL 기록 부정확 (타이밍) — ✅ 수정 완료
+- **원인**: 청산 직후 get_closed_pnl 호출 시 Bybit에 아직 반영 안 됨 (0.3초 대기 부족)
+- **수정**: 대기 시간 0.3초 → 1.0초, limit 5 → 10

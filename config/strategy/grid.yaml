@@ -8,7 +8,7 @@ strategies:
       enabled: true
       max_levels: 10
       min_levels: 3
-      target_spacing_pct: 0.6
+      target_spacing_pct: 1.0
     bias:
       btc_eth_weight: 0.5
       ema_periods:
@@ -38,7 +38,7 @@ strategies:
     max_symbols: 12
     max_total_exposure_pct: 80.0
     min_range_pct: 1.5
-    min_spacing_pct: 0.6
+    min_spacing_pct: 1.0
     mtf:
       conflicting_reduce_levels: 3
       ema_fast: 20

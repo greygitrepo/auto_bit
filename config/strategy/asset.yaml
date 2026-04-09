@@ -1,7 +1,7 @@
 active: grid_sizing
 capital:
   initial_balance: 20
-  mode: fixed
+  mode: compound
 consecutive_loss:
   cooldown_after: 4
   cooldown_minutes: 5
@@ -11,16 +11,16 @@ daily_limits:
   max_daily_trades: 200
   reset_time_utc: 00:00
 drawdown:
-  auto_recover: true
+  auto_recover: false
   reduce_factor: 0.5
-  reduce_pct: 70
-  stop_pct: 90
-  warning_pct: 50
+  reduce_pct: 30
+  stop_pct: 50
+  warning_pct: 20
 paper:
   fee_rate:
     maker: 0.0001
-    taker: 0.0006
-  slippage_bps: 15
+    taker: 0.00055
+  slippage_bps: 30
 strategies:
   fixed_ratio:
     capital_per_position_pct: 30.0
