@@ -139,6 +139,14 @@ class GridPositionManager:
                 reason=str(exc),
             )
 
+        # Check if order was rejected (min notional, insufficient balance, etc.)
+        if result.get("rejected"):
+            logger.info("Grid fill REJECTED {}: {}", symbol, result.get("reason", "unknown"))
+            return GridUpdateMessage(
+                symbol=symbol, level_id=msg.level_id, action="FAILED",
+                reason=result.get("reason", "order_rejected"),
+            )
+
         fill_price = result.get("fillPrice", level_price)
         fee = result.get("fee", 0.0)
         order_id = result.get("orderId", "")

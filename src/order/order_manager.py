@@ -108,6 +108,11 @@ class OrderManager:
                     symbol, side, qty
                 )
 
+            # Check if order was rejected (min notional, insufficient balance)
+            if order_info.get("rejected"):
+                logger.info("Order REJECTED {}: {}", symbol, order_info.get("reason"))
+                return None
+
             fill_price = order_info.get("fillPrice", signal.entry_price)
 
             # Try to get actual fee from executions

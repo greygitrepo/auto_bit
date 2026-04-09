@@ -105,7 +105,8 @@ class PaperExecutor:
         Starting account balance in USDT.
     """
 
-    def __init__(self, config: dict, initial_balance: float = 10_000.0) -> None:
+    def __init__(self, config: dict, initial_balance: float = 10_000.0,
+                 bybit_client=None) -> None:
         self.taker_fee_rate: float = config.get("fee_rate", {}).get("taker", 0.0006)
         self.maker_fee_rate: float = config.get("fee_rate", {}).get("maker", 0.0001)
         self.slippage_bps: int = config.get("slippage_bps", 5)
@@ -119,6 +120,11 @@ class PaperExecutor:
 
         # Track last known prices per symbol for unrealized P&L calculation
         self.last_prices: dict[str, float] = {}
+
+        # Instrument info cache for min qty / qty step / min notional validation
+        self._bybit_client = bybit_client
+        self._instrument_cache: dict[str, dict] = {}
+
         logger.info(
             "PaperExecutor initialised: balance={:.2f} USDT, "
             "taker_fee={:.4f}, slippage={}bps",
@@ -126,6 +132,47 @@ class PaperExecutor:
             self.taker_fee_rate,
             self.slippage_bps,
         )
+
+    # ------------------------------------------------------------------
+    # Instrument validation (mirrors LiveExecutor)
+    # ------------------------------------------------------------------
+
+    def _get_instrument_info(self, symbol: str) -> dict:
+        """Fetch and cache instrument info from Bybit API."""
+        if symbol not in self._instrument_cache:
+            if self._bybit_client is not None:
+                try:
+                    info = self._bybit_client.get_instrument_info(symbol)
+                    self._instrument_cache[symbol] = info
+                except Exception:
+                    self._instrument_cache[symbol] = {}
+            else:
+                self._instrument_cache[symbol] = {}
+        return self._instrument_cache[symbol]
+
+    def _round_qty(self, symbol: str, qty: float) -> float:
+        """Round quantity to instrument's lot size step, enforce minimum."""
+        info = self._get_instrument_info(symbol)
+        lot_filter = info.get("lotSizeFilter", {})
+        qty_step = float(lot_filter.get("qtyStep", "0.01"))
+        min_qty = float(lot_filter.get("minOrderQty", "0.01"))
+        rounded = int(qty / qty_step) * qty_step
+        return max(rounded, min_qty)
+
+    def _check_min_notional(self, symbol: str, qty: float, price: float) -> bool:
+        """Check if order meets minimum notional value (typically 5 USDT)."""
+        notional = qty * price
+        info = self._get_instrument_info(symbol)
+        # Bybit linear contracts: minNotionalValue is in lotSizeFilter
+        lot_filter = info.get("lotSizeFilter", {})
+        min_notional = float(lot_filter.get("minNotionalValue", "5"))
+        if notional < min_notional:
+            logger.info(
+                "Paper REJECT {}: notional {:.4f} < min {:.1f} USDT",
+                symbol, notional, min_notional,
+            )
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # Helpers
@@ -194,12 +241,42 @@ class PaperExecutor:
         -------
         Dict with ``orderId``, ``fillPrice``, ``fee``, ``side``, ``qty``.
         """
+        # Round qty to instrument step size and enforce minimum
+        qty = self._round_qty(symbol, qty)
+
         fill_price = self._apply_slippage(current_price, side)
+
+        # Check minimum notional value (e.g. 5 USDT)
+        if not self._check_min_notional(symbol, qty, fill_price):
+            return {
+                "orderId": "",
+                "fillPrice": 0.0,
+                "fee": 0.0,
+                "side": side,
+                "qty": 0.0,
+                "rejected": True,
+                "reason": "below_min_notional",
+            }
+
         notional = fill_price * qty
         fee = self._calculate_fee(notional)
 
         leverage = self.account.leverage_settings.get(symbol, 1)
         margin = notional / leverage
+
+        # Check sufficient balance
+        if self.account.balance < margin + fee:
+            logger.info("Paper REJECT {}: insufficient balance {:.4f} < {:.4f}",
+                        symbol, self.account.balance, margin + fee)
+            return {
+                "orderId": "",
+                "fillPrice": 0.0,
+                "fee": 0.0,
+                "side": side,
+                "qty": 0.0,
+                "rejected": True,
+                "reason": "insufficient_balance",
+            }
 
         # Deduct margin and fee from balance.
         self.account.balance -= margin + fee

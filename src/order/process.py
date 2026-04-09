@@ -120,9 +120,20 @@ class OrderManagerProcess(multiprocessing.Process):
             executor = LiveExecutor(bybit_client)
             logger.info("P3 using LiveExecutor")
         else:
-            executor = PaperExecutor(paper_config, initial_balance=initial_balance)
-            bybit_client = None
-            logger.info("P3 using PaperExecutor (balance={:.2f})", initial_balance)
+            # Create a read-only Bybit client for instrument info (min qty, etc.)
+            paper_bybit = None
+            try:
+                api_key = self.credentials.get("api_key")
+                api_secret = self.credentials.get("api_secret")
+                if api_key:
+                    paper_bybit = BybitClient(api_key=api_key, api_secret=api_secret)
+            except Exception:
+                pass
+            executor = PaperExecutor(paper_config, initial_balance=initial_balance,
+                                     bybit_client=paper_bybit)
+            bybit_client = paper_bybit
+            logger.info("P3 using PaperExecutor (balance={:.2f}, instrument_check={})",
+                        initial_balance, paper_bybit is not None)
 
         # 2. Create DB, OrderManager, PositionTracker
         db = DatabaseManager()
