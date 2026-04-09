@@ -55,7 +55,7 @@ strategies:
       weight_1h: 0.2
       weight_5m: 0.5
     num_levels: 10
-    qty_per_level_pct: 1.0
+    qty_per_level_pct: 5.0
     range_atr_multiplier: 2.0
     recenter_interval_minutes: 60
     recenter_threshold_pct: 3.5
