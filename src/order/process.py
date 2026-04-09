@@ -158,6 +158,12 @@ class OrderManagerProcess(multiprocessing.Process):
             )
             logger.info("P3 grid position manager initialized")
 
+            # Restore grid position mappings from DB
+            open_positions = self._position_tracker.get_open_positions()
+            restored = self._grid_manager.restore_from_positions(open_positions)
+            if restored:
+                logger.info("P3 restored {} grid position mappings from DB", restored)
+
         # 4. State
         self._mode = mode
         self._executor = executor

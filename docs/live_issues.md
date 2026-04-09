@@ -46,3 +46,11 @@ ERROR: set_margin_mode failed after 3 retries: unified account is forbidden (Err
 - **원인**: LiveExecutor에서 100028을 catch하기 전에 BybitClient의 _retry 데코레이터가 3회 재시도 후 raise
 - **영향**: OrderManager.execute_order에서 에러 전파 → Position 전략 주문 실패
 - **수정**: BybitClient.set_margin_mode 내부에서 100028/110026 에러를 catch하여 즉시 반환
+
+### 4. 재시작 시 Grid 포지션 고아화 — ✅ 수정 완료
+- **원인**: GridPositionManager의 `_level_positions` 매핑이 메모리에만 존재. 재시작 시 초기화되어 기존 포지션과의 연결이 끊김
+- **증상**: TP_HIT 시 "no position for symbol" 경고 → 청산 불가 → 포지션 영구 잔류
+- **수정**: 
+  - `GridPositionManager.restore_from_positions()` 메서드 추가
+  - P3 초기화 시 DB의 오픈 포지션(strategy=grid_bias/recovered)을 _level_positions에 복원
+  - Live mode에서는 LivePositionLedger에도 복원

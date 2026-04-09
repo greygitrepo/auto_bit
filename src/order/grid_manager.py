@@ -63,6 +63,66 @@ class GridPositionManager:
         """Create composite key from signal message."""
         return (msg.symbol, msg.level_index)
 
+    def restore_from_positions(self, open_positions: list) -> int:
+        """Restore _level_positions from DB open positions after restart.
+
+        Matches open positions with strategy='grid_bias' back to their
+        (symbol, level_index) keys so that TP_HIT signals can find them.
+
+        For grid positions that don't have level_index info, we assign
+        synthetic negative indices to ensure they can still be closed.
+
+        Returns number of restored mappings.
+        """
+        restored = 0
+        # Group by symbol for synthetic index assignment
+        symbol_counters: Dict[str, int] = {}
+
+        for pos in open_positions:
+            strategy = pos.get("strategy", "")
+            if strategy not in ("grid_bias", "recovered"):
+                continue
+
+            symbol = pos.get("symbol", "")
+            position_id = pos.get("id", 0)
+            if not symbol or not position_id:
+                continue
+
+            # Try to get level_index from position metadata
+            # If not available, assign synthetic index
+            if symbol not in symbol_counters:
+                symbol_counters[symbol] = -100  # Start from -100 to avoid clash
+            idx = symbol_counters[symbol]
+            symbol_counters[symbol] -= 1
+
+            key = (symbol, idx)
+            self._level_positions[key] = position_id
+
+            # Restore ledger entry for live mode
+            if self._ledger is not None:
+                side = pos.get("side", "Buy")
+                qty = float(pos.get("size", 0))
+                entry_price = float(pos.get("entry_price", 0))
+                leverage = int(pos.get("leverage", 1))
+                margin = float(pos.get("margin", 0))
+                self._ledger.add_position(
+                    level_key=key,
+                    symbol=symbol,
+                    side=side,
+                    qty=qty,
+                    entry_price=entry_price,
+                    leverage=leverage,
+                    margin=margin,
+                )
+
+            restored += 1
+            logger.info(
+                "GridManager restored: {} pos_id={} key={}",
+                symbol, position_id, key,
+            )
+
+        return restored
+
     async def handle_grid_signal(
         self,
         msg: GridSignalMessage,
