@@ -556,34 +556,18 @@ class BybitClient:
         logger.debug("set_leverage: done for {}", symbol)
         return result if result else {}
 
-    @_retry()
     def set_margin_mode(
         self, symbol: str, mode: str = "ISOLATED_MARGIN", leverage: int = 1
     ) -> Dict[str, Any]:
         """Switch a symbol's margin mode.
 
-        Parameters
-        ----------
-        symbol:
-            Trading pair.
-        mode:
-            ``"ISOLATED_MARGIN"`` (default) or ``"CROSS_MARGIN"``.
-        leverage:
-            Leverage multiplier to set alongside the margin switch (default 1).
-
-        Returns
-        -------
-        Empty dict on success.
+        No @_retry — handles UTA/already-set errors internally.
         """
         self._require_auth()
-        # Bybit API uses tradeMode: 0 = cross, 1 = isolated
         trade_mode = 1 if "ISOLATED" in mode.upper() else 0
         logger.debug(
             "set_margin_mode: symbol={} mode={} (tradeMode={}) leverage={}",
-            symbol,
-            mode,
-            trade_mode,
-            leverage,
+            symbol, mode, trade_mode, leverage,
         )
         try:
             raw = self._http.switch_margin_mode(
@@ -596,11 +580,11 @@ class BybitClient:
             result = self._parse_response(raw, "set_margin_mode")
             logger.debug("set_margin_mode: done for {}", symbol)
             return result if result else {}
-        except BybitAPIError as exc:
-            # 100028 = Unified Trading Account (margin mode not applicable)
-            # 110026 = margin mode not modified (already set)
-            if exc.ret_code in (100028, 110026):
-                logger.debug("set_margin_mode skipped for {} (code={})", symbol, exc.ret_code)
+        except Exception as exc:
+            exc_str = str(exc)
+            # UTA account (100028) or already set (110026) — silently skip
+            if "100028" in exc_str or "110026" in exc_str:
+                logger.debug("set_margin_mode skipped for {} ({})", symbol, exc_str[:60])
                 return {}
             raise
 
