@@ -196,51 +196,57 @@ class StrategyEngineProcess(multiprocessing.Process):
         from src.utils.db import DatabaseManager
         self._db = DatabaseManager()
 
-        # --- Determine active strategy via registry ---
+        # --- Determine active strategies via registry ---
         from src.strategy.position.registry import get_strategy_class, ensure_loaded, GRID_STRATEGIES
         ensure_loaded()
 
-        # Check grid config first (backward compat)
         grid_cfg = self._config.get("grid", {})
         position_cfg = self._config.get("position", {})
 
-        # Strategy name: check grid.active first, then position.active, fallback
-        strategy_name = grid_cfg.get("active", "")
-        if not strategy_name or strategy_name not in GRID_STRATEGIES:
-            strategy_name = position_cfg.get("active", "momentum_scalper")
+        # --- Grid strategy (primary) ---
+        grid_name = grid_cfg.get("active", "")
+        self._grid_strategy = None
+        self._last_funding_fetch = 0.0
+        self._funding_fetch_interval = 3600.0
 
-        strategy_cls, is_grid = get_strategy_class(strategy_name)
-
-        if strategy_cls is None:
-            logger.warning("Unknown strategy '{}', falling back to momentum_scalper", strategy_name)
-            from src.strategy.position.momentum_scalper import MomentumScalper as _FallbackScalper
-            strategy_cls = _FallbackScalper
-            is_grid = False
-
-        if is_grid:
-            self._grid_strategy = strategy_cls(grid_cfg, db=self._db)
+        if grid_name and grid_name in GRID_STRATEGIES:
+            grid_cls, _ = get_strategy_class(grid_name)
+            self._grid_strategy = grid_cls(grid_cfg, db=self._db)
             self._grid_strategy.restore_from_db(self._config.get("mode", "paper"))
-            self._scalper = None
-            self._tuner = None
-            self._last_funding_fetch = 0.0
-            self._funding_fetch_interval = 3600.0
-            logger.info("P2 using strategy: {} (grid type)", strategy_name)
-        else:
-            self._grid_strategy = None
-            ms_cfg = position_cfg.get("strategies", {}).get(strategy_name, {})
-            exit_cfg = position_cfg.get("exit", {})
-            if exit_cfg and "exit" not in ms_cfg:
-                ms_cfg["exit"] = exit_cfg
-            self._scalper = strategy_cls(config=ms_cfg if ms_cfg else None)
+            logger.info("P2 grid strategy loaded: {}", grid_name)
 
-            tuner_cfg = ms_cfg.get("tuner", {})
-            self._tuner = StrategyTuner(
-                config=tuner_cfg,
-                initial_params=self._scalper.params,
-                db=self._db,
-            )
-            self._tuner.restore_from_db(self._scalper.params)
-            logger.info("P2 using strategy: {} (position type)", strategy_name)
+        # --- Position strategy (secondary / standalone) ---
+        pos_name = position_cfg.get("active", "")
+        self._scalper = None
+        self._tuner = None
+
+        if pos_name:
+            pos_cls, is_grid = get_strategy_class(pos_name)
+            if pos_cls is not None and not is_grid:
+                ms_cfg = position_cfg.get("strategies", {}).get(pos_name, {})
+                exit_cfg = position_cfg.get("exit", {})
+                if exit_cfg and "exit" not in ms_cfg:
+                    ms_cfg["exit"] = exit_cfg
+                self._scalper = pos_cls(config=ms_cfg if ms_cfg else None)
+
+                tuner_cfg = ms_cfg.get("tuner", {})
+                self._tuner = StrategyTuner(
+                    config=tuner_cfg,
+                    initial_params=self._scalper.params,
+                    db=self._db,
+                )
+                self._tuner.restore_from_db(self._scalper.params)
+                logger.info("P2 position strategy loaded: {}", pos_name)
+
+        # Fallback: if nothing loaded, default to momentum_scalper
+        if self._grid_strategy is None and self._scalper is None:
+            from src.strategy.position.momentum_scalper import MomentumScalper as _Fallback
+            self._scalper = _Fallback()
+            logger.warning("No strategy configured, falling back to momentum_scalper")
+
+        # Log dual mode
+        if self._grid_strategy is not None and self._scalper is not None:
+            logger.info("P2 DUAL MODE: grid={} + position={}", grid_name, pos_name)
 
         # --- Load base symbol history via API ---
         for sym in self._base_symbols:
@@ -421,9 +427,10 @@ class StrategyEngineProcess(multiprocessing.Process):
             timeframe == self._primary_tf
             and symbol in self._active_trading_symbols
         ):
+            # Dual strategy: run grid AND position strategy if both configured
             if self._grid_strategy is not None:
                 self._evaluate_grid_strategy(symbol, candle)
-            else:
+            if self._scalper is not None:
                 self._evaluate_strategy(symbol)
 
     def _evaluate_strategy(self, symbol: str) -> None:

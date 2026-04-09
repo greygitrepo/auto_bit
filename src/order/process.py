@@ -377,6 +377,15 @@ class OrderManagerProcess(multiprocessing.Process):
             )
             return
 
+        # Dual mode: skip if grid already has positions on this symbol
+        if self._grid_manager is not None:
+            grid_symbols = set(
+                k[0] for k in self._grid_manager._level_positions.keys()
+            )
+            if symbol in grid_symbols:
+                logger.debug("P3 position signal skipped {}: grid has open levels", symbol)
+                return
+
         # For LONG / SHORT: evaluate through asset strategy
         current_balance = self._get_current_balance()
         open_positions = self._position_tracker.get_open_positions()
