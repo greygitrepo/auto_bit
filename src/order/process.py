@@ -257,6 +257,11 @@ class OrderManagerProcess(multiprocessing.Process):
                     self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
                 last_monitor_time = now
 
+            # c3. Live mode: detect server-side SL/TP fills and clean up
+            if self._mode == "live" and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
+                await self._sync_exchange_positions()
+                last_monitor_time = now
+
             # d. Send position updates to P2 periodically
             if now - last_update_time >= _POSITION_UPDATE_INTERVAL:
                 self._send_position_update()
@@ -517,6 +522,124 @@ class OrderManagerProcess(multiprocessing.Process):
             self._trailing_stops.pop(symbol, None)
             self._notify_slot_available()
             logger.info("P3 closed {} via strategy signal: pnl={:.4f}", symbol, pnl)
+
+    # ------------------------------------------------------------------
+    # Live exchange position sync
+    # ------------------------------------------------------------------
+
+    async def _sync_exchange_positions(self) -> None:
+        """Detect positions closed by Bybit server-side SL/TP.
+
+        Compares DB open positions against actual exchange positions.
+        If a DB position no longer exists on exchange, it was closed by
+        a server-side SL/TP trigger. Clean up: close DB record, cancel
+        remaining conditional orders, notify slot available.
+        """
+        if self._bybit_client is None:
+            return
+
+        db_positions = self._position_tracker.get_open_positions()
+        if not db_positions:
+            return
+
+        try:
+            exchange_positions = await asyncio.get_event_loop().run_in_executor(
+                None, self._bybit_client.get_positions, None
+            )
+        except Exception as exc:
+            logger.debug("Exchange position sync failed: {}", exc)
+            return
+
+        # Build set of symbols with open exchange positions
+        exchange_symbols = set()
+        for ep in exchange_positions:
+            if float(ep.get("size", 0)) > 0:
+                exchange_symbols.add(ep["symbol"])
+
+        # Find DB positions not on exchange (server-side closed)
+        for pos in db_positions:
+            symbol = pos.get("symbol", "")
+            if symbol in exchange_symbols:
+                continue
+
+            # This position was closed by server-side SL/TP
+            position_id = pos.get("id")
+            logger.warning(
+                "Server-side close detected: {} {} (pos_id={}). Cleaning up.",
+                symbol, pos.get("side"), position_id,
+            )
+
+            # Cancel remaining conditional orders
+            sl_oid = pos.get("sl_order_id", "")
+            tp_oid = pos.get("tp_order_id", "")
+            cancel_ids = [oid for oid in [sl_oid, tp_oid] if oid]
+            if cancel_ids and hasattr(self._executor, 'cancel_orders'):
+                try:
+                    await self._executor.cancel_orders(symbol, cancel_ids)
+                    logger.info("Cancelled {} orphan orders for {}", len(cancel_ids), symbol)
+                except Exception:
+                    pass
+
+            # Also cancel ALL open orders for this symbol as safety net
+            try:
+                raw = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self._bybit_client._http.get_open_orders(
+                        category="linear", symbol=symbol
+                    )
+                )
+                remaining = raw.get("result", {}).get("list", [])
+                for order in remaining:
+                    oid = order.get("orderId", "")
+                    if oid:
+                        try:
+                            await asyncio.get_event_loop().run_in_executor(
+                                None, lambda o=oid: self._bybit_client.cancel_order(symbol, o)
+                            )
+                            logger.info("Cancelled remaining order {} for {}", oid, symbol)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # Get closed PnL from exchange
+            pnl = 0.0
+            try:
+                closed = await asyncio.get_event_loop().run_in_executor(
+                    None, self._bybit_client.get_closed_pnl, symbol, 5
+                )
+                for cp in (closed or []):
+                    pnl += float(cp.get("closedPnl", 0))
+            except Exception:
+                pass
+
+            # Close in DB
+            entry_price = float(pos.get("entry_price", 0))
+            self._position_tracker.close_position(
+                position_id=position_id,
+                exit_price=entry_price,  # Approximate
+                exit_reason="server_side_sl_tp",
+                exit_type="server_side",
+                fee=0.0,
+            )
+
+            # Clean up grid manager mapping if applicable
+            if self._grid_manager is not None:
+                keys_to_remove = [
+                    k for k, v in self._grid_manager._level_positions.items()
+                    if v == position_id
+                ]
+                for k in keys_to_remove:
+                    self._grid_manager._level_positions.pop(k, None)
+                    self._grid_manager._level_order_ids.pop(k, None)
+                    self._grid_manager._level_entry_fees.pop(k, None)
+
+            self._trailing_stops.pop(symbol, None)
+            self._asset_strategy.loss_tracker.record_trade(is_win=pnl > 0)
+            self._notify_slot_available()
+
+            logger.info(
+                "Server-side close cleanup done: {} pnl={:+.6f}", symbol, pnl,
+            )
 
     # ------------------------------------------------------------------
     # Position monitoring

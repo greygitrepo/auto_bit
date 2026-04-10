@@ -111,3 +111,15 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
   - grid_manager._handle_tp_hit: 청산 전 sl_order_id/tp_order_id cancel_orders 호출
   - process._monitor_positions: SL/TP 모니터링 청산에서도 cancel_orders 호출
   - order_manager.close_position: 기존 구현 확인 (이미 cancel 있음)
+
+### 14. Bybit 서버사이드 SL/TP 체결 시 P3 미감지 → 고아 주문 잔존 — ✅ 수정 완료
+- **원인**: Bybit이 서버사이드 SL/TP로 포지션을 자동 청산하면 P3가 이를 감지하지 못함
+  → DB에 포지션이 열린 상태로 남음 → 반대편 TP/SL 조건부 주문 미취소
+- **위험**: 고아 조건부 주문이 트리거되면 의도치 않은 신규 포지션 열림
+- **수정**: `_sync_exchange_positions()` 메서드 추가
+  - 매 모니터링 주기마다 DB vs exchange 포지션 비교
+  - exchange에 없는 DB 포지션 발견 시:
+    1. 해당 심볼의 SL/TP 조건부 주문 취소
+    2. 심볼의 모든 미체결 주문 취소 (안전망)
+    3. DB 포지션 기록 청산
+    4. Grid manager 매핑 정리
