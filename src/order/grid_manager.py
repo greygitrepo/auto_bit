@@ -318,6 +318,17 @@ class GridPositionManager:
         entry_fee = self._level_entry_fees.get(key, 0.0)
         total_fee = entry_fee + exit_fee
 
+        # Cancel any remaining SL/TP conditional orders on exchange
+        sl_oid = position.get("sl_order_id", "")
+        tp_oid = position.get("tp_order_id", "")
+        cancel_ids = [oid for oid in [sl_oid, tp_oid] if oid]
+        if cancel_ids and hasattr(self._executor, 'cancel_orders'):
+            try:
+                await self._executor.cancel_orders(symbol, cancel_ids)
+                logger.info("Grid: cancelled {} SL/TP orders for {}", len(cancel_ids), symbol)
+            except Exception as exc:
+                logger.warning("Grid: failed to cancel SL/TP for {}: {}", symbol, exc)
+
         self._tracker.close_position(
             position_id=position_id,
             exit_price=fill_price,

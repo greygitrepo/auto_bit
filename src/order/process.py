@@ -603,6 +603,16 @@ class OrderManagerProcess(multiprocessing.Process):
             pnl = fill["pnl"]
             fill_type = fill["fill_type"]
 
+            # Cancel remaining SL/TP conditional orders on exchange
+            sl_oid = pos.get("sl_order_id", "")
+            tp_oid = pos.get("tp_order_id", "")
+            cancel_ids = [oid for oid in [sl_oid, tp_oid] if oid]
+            if cancel_ids and self._mode == "live" and hasattr(self._executor, 'cancel_orders'):
+                try:
+                    await self._executor.cancel_orders(symbol, cancel_ids)
+                except Exception:
+                    pass
+
             # Record in position tracker
             if pos.get("id"):
                 self._position_tracker.close_position(

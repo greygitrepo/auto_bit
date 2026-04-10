@@ -103,3 +103,11 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
   - 필요 마진 = notional / leverage
   - 가용 잔고의 80% 초과 시 주문 거부 (20% 여유 확보)
   - leverage 캐시로 정확한 마진 계산
+
+### 13. 포지션 청산 후 SL/TP 조건부 주문 미취소 — ✅ 수정 완료
+- **원인**: Grid TP나 전략 청산으로 포지션 닫혀도 Bybit 서버의 SL/TP 조건부 주문이 잔존
+- **위험**: 가격이 SL/TP에 닿으면 포지션 없이 신규 포지션 열림
+- **수정**:
+  - grid_manager._handle_tp_hit: 청산 전 sl_order_id/tp_order_id cancel_orders 호출
+  - process._monitor_positions: SL/TP 모니터링 청산에서도 cancel_orders 호출
+  - order_manager.close_position: 기존 구현 확인 (이미 cancel 있음)
