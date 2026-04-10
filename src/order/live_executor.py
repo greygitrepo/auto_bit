@@ -29,6 +29,7 @@ class LiveExecutor:
     def __init__(self, bybit_client: BybitClient) -> None:
         self.client = bybit_client
         self._instrument_cache: Dict[str, dict] = {}
+        self._leverage_cache: Dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Helpers
@@ -119,6 +120,7 @@ class LiveExecutor:
                 )
             else:
                 raise
+        self._leverage_cache[symbol] = leverage
 
     # ------------------------------------------------------------------
     # Order placement
@@ -162,6 +164,25 @@ class LiveExecutor:
             if notional < min_notional:
                 logger.info("Live REJECT {}: notional {:.2f} < min {:.1f}", symbol, notional, min_notional)
                 return {"rejected": True, "reason": "below_min_notional", "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+
+        # Check available margin before placing order
+        try:
+            wallet = await self._run_sync(self.client.get_wallet_balance)
+            usdt = wallet.get("usdt", {})
+            available = float(usdt.get("availableToWithdraw", 0) or usdt.get("walletBalance", 0) or 0)
+            # Estimate required margin: notional / leverage
+            leverage = self._leverage_cache.get(symbol, 1)
+            est_notional = qty * current_price if current_price > 0 else 0
+            required_margin = est_notional / leverage if leverage > 0 else est_notional
+            # Keep 20% reserve
+            if available > 0 and required_margin > available * 0.8:
+                logger.info(
+                    "Live REJECT {}: margin {:.2f} > available {:.2f} (80%)",
+                    symbol, required_margin, available * 0.8,
+                )
+                return {"rejected": True, "reason": "insufficient_margin", "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+        except Exception as exc:
+            logger.debug("Margin check skipped for {}: {}", symbol, exc)
 
         result = await self._run_sync(
             self.client.place_order,

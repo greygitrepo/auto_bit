@@ -96,3 +96,10 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
 ### 12. 잔고 부족 (110007) — 관찰 중
 - 10개 포지션 동시 오픈으로 마진 소진
 - 비치명적 (신규 주문만 거부). max_concurrent_positions 설정으로 제어 가능
+
+### 12. 잔고 부족 (110007) — ✅ 수정 완료
+- **수정**: LiveExecutor.place_market_order에서 주문 전 가용 마진 체크
+  - Bybit API로 availableToWithdraw 조회
+  - 필요 마진 = notional / leverage
+  - 가용 잔고의 80% 초과 시 주문 거부 (20% 여유 확보)
+  - leverage 캐시로 정확한 마진 계산
