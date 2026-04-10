@@ -123,3 +123,7 @@ Order execution failed: set_leverage failed after 3 retries: leverage not modifi
     2. 심볼의 모든 미체결 주문 취소 (안전망)
     3. DB 포지션 기록 청산
     4. Grid manager 매핑 정리
+
+### 15. _sync_exchange_positions 미실행 (c2/c3 타이밍 충돌) — ✅ 수정 완료
+- **원인**: c2(grid 모니터링)에서 last_monitor_time을 갱신 → c3(exchange sync) 조건 항상 false
+- **수정**: c3를 c2 블록 안으로 이동하여 같은 주기에 함께 실행

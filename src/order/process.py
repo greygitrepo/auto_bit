@@ -255,11 +255,11 @@ class OrderManagerProcess(multiprocessing.Process):
                     self._apply_paper_funding()
                     self._db.set_state("current_balance_paper", str(round(self._executor.account.balance, 4)))
                     self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
-                last_monitor_time = now
 
-            # c3. Live mode: detect server-side SL/TP fills and clean up
-            if self._mode == "live" and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
-                await self._sync_exchange_positions()
+                # Live mode: detect server-side SL/TP fills and clean up
+                if self._mode == "live":
+                    await self._sync_exchange_positions()
+
                 last_monitor_time = now
 
             # d. Send position updates to P2 periodically
