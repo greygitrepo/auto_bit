@@ -617,6 +617,7 @@ class StrategyEngineProcess(multiprocessing.Process):
                 level_price=sig.level_price,
                 side=sig.side,
                 tp_price=sig.tp_price,
+                sl_price=getattr(sig, 'sl_price', 0.0),
                 grid_state_id=sig.grid_state_id,
                 qty_per_level=grid_state.qty_per_level if grid_state else 0,
                 leverage=grid_state.leverage if grid_state else 5,

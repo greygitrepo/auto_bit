@@ -115,16 +115,21 @@ class GridEngine:
         )
 
         levels = []
+        # SL distance = 3x spacing (lose 3 spacings before cut)
+        sl_multiplier = self.config.get("sl_spacing_multiplier", 3)
+
         # Buy levels below center (level_index: -1, -2, ... -num_buy)
         for i in range(1, num_buy + 1):
             price = center_price - (grid_spacing * i)
             tp = price + grid_spacing  # TP = one spacing above buy price
+            sl = price - grid_spacing * sl_multiplier  # SL below entry
             levels.append(GridLevel(
                 level_index=-i,
                 price=round(price, 10),
                 side="Buy",
                 status=GridLevelStatus.PENDING,
                 tp_price=round(tp, 10),
+                sl_price=round(sl, 10),
                 created_at=now,
                 updated_at=now,
             ))
@@ -133,12 +138,14 @@ class GridEngine:
         for i in range(1, num_sell + 1):
             price = center_price + (grid_spacing * i)
             tp = price - grid_spacing  # TP = one spacing below sell price
+            sl = price + grid_spacing * sl_multiplier  # SL above entry
             levels.append(GridLevel(
                 level_index=i,
                 price=round(price, 10),
                 side="Sell",
                 status=GridLevelStatus.PENDING,
                 tp_price=round(tp, 10),
+                sl_price=round(sl, 10),
                 created_at=now,
                 updated_at=now,
             ))
@@ -257,6 +264,53 @@ class GridEngine:
                 logger.info(
                     "Grid TP_HIT: level={} side={} fill={:.6f} tp={:.6f}",
                     level.level_index, level.side, level.fill_price, level.tp_price,
+                )
+
+        return signals
+
+    def check_sl_hits(
+        self, candle: Dict[str, Any], levels: List[GridLevel],
+    ) -> List[GridSignal]:
+        """Check if any FILLED/TP_SET levels hit their stop-loss.
+
+        Returns list of CLOSE signals for levels that hit SL.
+        """
+        signals: List[GridSignal] = []
+        low = float(candle.get("low", 0))
+        high = float(candle.get("high", 0))
+
+        for level in levels:
+            if level.status not in (GridLevelStatus.FILLED, GridLevelStatus.TP_SET):
+                continue
+            if level.sl_price <= 0:
+                continue
+
+            hit = False
+            if level.side == "Buy" and low <= level.sl_price:
+                hit = True
+            elif level.side == "Sell" and high >= level.sl_price:
+                hit = True
+
+            if hit:
+                level.status = GridLevelStatus.COMPLETED
+                level.updated_at = int(time.time())
+
+                signals.append(GridSignal(
+                    symbol="",
+                    action=GridAction.TP_HIT,  # Reuse TP_HIT action for close
+                    level_id=level.id,
+                    level_index=level.level_index,
+                    level_price=level.price,
+                    side=level.side,
+                    tp_price=level.sl_price,  # Close at SL price
+                    sl_price=level.sl_price,
+                    grid_state_id=level.grid_state_id,
+                    reason=f"Level {level.level_index} SL hit at {level.sl_price:.6f}",
+                ))
+
+                logger.info(
+                    "Grid SL_HIT: level={} side={} fill={:.6f} sl={:.6f}",
+                    level.level_index, level.side, level.fill_price, level.sl_price,
                 )
 
         return signals

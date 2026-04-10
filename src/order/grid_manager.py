@@ -234,7 +234,7 @@ class GridPositionManager:
             "size": order_req.qty,
             "entry_price": fill_price,
             "leverage": leverage,
-            "stop_loss": 0.0,
+            "stop_loss": getattr(msg, 'sl_price', 0.0),
             "take_profit": msg.tp_price,
             "margin": order_req.risk_amount,
             "unrealized_pnl": 0.0,

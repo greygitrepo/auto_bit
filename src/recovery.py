@@ -210,14 +210,20 @@ class RecoveryManager:
                     )
                     # Create DB record for orphaned exchange position so it can be tracked
                     try:
+                        entry = float(ex_pos.get("avgPrice", 0))
+                        # Set default SL at 5% from entry
+                        if pos_side == "Buy":
+                            default_sl = entry * 0.95
+                        else:
+                            default_sl = entry * 1.05
                         self.db.insert_position(
                             mode=self.mode,
                             symbol=ex_symbol,
                             side=pos_side,
                             size=float(ex_pos.get("size", 0)),
-                            entry_price=float(ex_pos.get("avgPrice", 0)),
+                            entry_price=entry,
                             leverage=int(ex_pos.get("leverage", 1)),
-                            stop_loss=0.0,
+                            stop_loss=default_sl,
                             take_profit=0.0,
                             margin=float(ex_pos.get("positionIM", 0)),
                             unrealized_pnl=float(ex_pos.get("unrealisedPnl", 0)),

@@ -256,7 +256,13 @@ class GridBiasStrategy:
                     lv.updated_at = int(time.time())
                     break
 
-        # Recycle completed levels (only those with successful TP)
+        # Check SL hits on FILLED/TP_SET levels
+        sl_signals = self.engine.check_sl_hits(candle_5m, grid.levels)
+        for sig in sl_signals:
+            sig.symbol = symbol
+        signals.extend(sl_signals)
+
+        # Recycle completed levels (TP or SL)
         recycled = self.engine.recycle_completed(grid.levels)
         if recycled > 0:
             logger.debug("{}: recycled {} completed levels", symbol, recycled)

@@ -114,6 +114,7 @@ class GridSignalMessage:
     level_price: float = 0.0
     side: str = ""      # Buy | Sell
     tp_price: float = 0.0
+    sl_price: float = 0.0
     grid_state_id: int = 0
     qty_per_level: float = 0.0
     leverage: int = 1

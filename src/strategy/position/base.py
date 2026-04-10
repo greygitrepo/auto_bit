@@ -169,6 +169,7 @@ class GridLevel:
     side: str = ""              # "Buy" or "Sell"
     status: GridLevelStatus = GridLevelStatus.PENDING
     tp_price: float = 0.0
+    sl_price: float = 0.0
     fill_price: float = 0.0
     fill_time: int = 0
     tp_fill_price: float = 0.0
@@ -215,5 +216,6 @@ class GridSignal:
     level_price: float = 0.0
     side: str = ""              # "Buy" or "Sell"
     tp_price: float = 0.0
+    sl_price: float = 0.0
     grid_state_id: int = 0
     reason: str = ""

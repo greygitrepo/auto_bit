@@ -128,11 +128,21 @@ class OrderManager:
                     exec_fee = abs(fill_price * qty) * 0.0006  # estimate
 
             # 3. Place SL/TP conditional orders.
-            sl_tp_info = await self.executor.place_sl_tp(
-                symbol, side, qty, sl_price, tp_price
-            )
-            order_info["slOrderId"] = sl_tp_info.get("slOrderId", "")
-            order_info["tpOrderId"] = sl_tp_info.get("tpOrderId", "")
+            # If this fails, the position is still open — P3 will monitor
+            # price and close via strategy exit as fallback.
+            try:
+                sl_tp_info = await self.executor.place_sl_tp(
+                    symbol, side, qty, sl_price, tp_price
+                )
+                order_info["slOrderId"] = sl_tp_info.get("slOrderId", "")
+                order_info["tpOrderId"] = sl_tp_info.get("tpOrderId", "")
+            except Exception as exc:
+                logger.warning(
+                    "SL/TP order failed for {} (position still open, will monitor): {}",
+                    symbol, exc,
+                )
+                order_info["slOrderId"] = ""
+                order_info["tpOrderId"] = ""
 
             # 4. Record position in database.
             margin = order_request.size / leverage
