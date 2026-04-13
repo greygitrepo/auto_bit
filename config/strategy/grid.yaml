@@ -59,4 +59,6 @@ strategies:
     range_atr_multiplier: 2.0
     recenter_interval_minutes: 60
     recenter_threshold_pct: 3.5
+    sl_spacing_multiplier: 1.5
+    min_hold_seconds: 300
     stale_fill_revert_seconds: 120
