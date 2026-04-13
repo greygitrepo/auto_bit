@@ -90,9 +90,11 @@ class GridEngine:
                 grid_spacing = grid_range / num_levels
 
         # Apply bias shift to buy/sell level counts
+        # Long bias: crypto markets have upward skew, so add +1 to buy levels
+        long_bias_shift = self.config.get("long_bias_extra", 1)
         default_half = num_levels // 2
-        num_buy = default_half + level_shift
-        num_sell = num_levels - default_half - level_shift
+        num_buy = default_half + level_shift + long_bias_shift
+        num_sell = num_levels - default_half - level_shift - long_bias_shift
         # Clamp to at least 1 of each, total = num_levels
         num_buy = max(1, min(num_levels - 1, num_buy))
         num_sell = num_levels - num_buy
@@ -194,6 +196,17 @@ class GridEngine:
                 filled = True
 
             if filled:
+                # Check actual spacing (fill price vs TP) — reject if too small
+                actual_spacing_pct = abs(level.tp_price - level.price) / level.price * 100 if level.price > 0 else 0
+                min_actual = self.config.get("min_spacing_pct", 0.60)  # already in %
+                if actual_spacing_pct < min_actual * 0.5:
+                    # Spacing less than 50% of configured minimum — skip this fill
+                    logger.info(
+                        "Fill SKIPPED: level={} spacing={:.3f}% < min {:.3f}%",
+                        level.level_index, actual_spacing_pct, min_actual * 0.5,
+                    )
+                    continue
+
                 level.status = GridLevelStatus.FILLED
                 level.fill_price = level.price
                 level.fill_time = int(candle.get("timestamp", time.time()))
@@ -230,11 +243,17 @@ class GridEngine:
         low = float(candle.get("low", 0))
         high = float(candle.get("high", 0))
 
+        # Minimum hold time before TP check (avoid 0-5min trades that lose to slippage)
+        min_hold_seconds = self.config.get("min_hold_seconds", 600)  # default 10 min
+        now_ts = int(candle.get("timestamp", time.time()))
+
         for level in levels:
             # Check both FILLED and TP_SET levels for TP hits.
-            # FILLED levels may not have received P3 confirmation yet,
-            # but we still check TP to avoid missing fast moves.
             if level.status not in (GridLevelStatus.FILLED, GridLevelStatus.TP_SET):
+                continue
+
+            # Skip TP check if level was filled too recently
+            if level.fill_time > 0 and (now_ts - level.fill_time) < min_hold_seconds:
                 continue
 
             hit = False
