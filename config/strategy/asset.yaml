@@ -19,8 +19,8 @@ drawdown:
 paper:
   fee_rate:
     maker: 0.0001
-    taker: 0.00055
-  slippage_bps: 30
+    taker: 0.0001  # 지정가(PostOnly) 사용으로 maker rate 적용
+  slippage_bps: 0   # 지정가는 슬리피지 없음
 strategies:
   fixed_ratio:
     capital_per_position_pct: 30.0

@@ -351,6 +351,8 @@ class BybitClient:
         side: str,
         qty: str,
         order_type: str = "Market",
+        price: str = None,
+        time_in_force: str = None,
     ) -> Dict[str, Any]:
         """Place a new order.
 
@@ -364,6 +366,10 @@ class BybitClient:
             Order quantity as a string (Bybit convention).
         order_type:
             ``"Market"`` (default) or ``"Limit"``.
+        price:
+            Limit price (required for Limit orders).
+        time_in_force:
+            ``"GTC"`` (default for Limit), ``"IOC"``, ``"FOK"``, ``"PostOnly"``.
 
         Returns
         -------
@@ -371,19 +377,23 @@ class BybitClient:
         """
         self._require_auth()
         logger.debug(
-            "place_order: symbol={} side={} qty={} type={}",
-            symbol,
-            side,
-            qty,
-            order_type,
+            "place_order: symbol={} side={} qty={} type={} price={}",
+            symbol, side, qty, order_type, price,
         )
-        raw = self._http.place_order(
+        kwargs = dict(
             category=self.CATEGORY,
             symbol=symbol,
             side=side,
             qty=qty,
             orderType=order_type,
         )
+        if price is not None:
+            kwargs["price"] = price
+        if time_in_force is not None:
+            kwargs["timeInForce"] = time_in_force
+        elif order_type == "Limit":
+            kwargs["timeInForce"] = "PostOnly"  # Maker only — no taker fees
+        raw = self._http.place_order(**kwargs)
         result = self._parse_response(raw, "place_order")
         logger.debug("place_order: result={}", result)
         return result

@@ -188,10 +188,17 @@ class GridPositionManager:
             await asyncio.sleep(self._order_delay)
 
         try:
-            result = await self._executor.place_market_order(
-                symbol=symbol, side=side, qty=order_req.qty,
-                current_price=level_price,
-            )
+            # Live mode: use limit order (PostOnly) to avoid taker fees
+            if self._mode == "live" and hasattr(self._executor, 'place_limit_order'):
+                result = await self._executor.place_limit_order(
+                    symbol=symbol, side=side, qty=order_req.qty,
+                    price=level_price, timeout_seconds=20,
+                )
+            else:
+                result = await self._executor.place_market_order(
+                    symbol=symbol, side=side, qty=order_req.qty,
+                    current_price=level_price,
+                )
         except Exception as exc:
             logger.error("Grid fill order failed {}: {}", symbol, exc)
             return GridUpdateMessage(
@@ -281,32 +288,36 @@ class GridPositionManager:
 
         tp_price = msg.tp_price
         try:
-            if self._ledger is not None and hasattr(self._executor, 'close_partial'):
-                # Live mode: partial close using ledger qty
-                close_qty = self._ledger.get_partial_close_qty(key)
-                pos_side = position["side"]
-                if close_qty > 0:
-                    result = await self._executor.close_partial(
-                        symbol=symbol, side=pos_side,
-                        qty=close_qty, current_price=tp_price,
-                    )
-                else:
-                    logger.warning("Grid TP: ledger has no qty for key={}", key)
-                    close_side = "Sell" if pos_side == "Buy" else "Buy"
+            close_side = "Sell" if position["side"] == "Buy" else "Buy"
+            close_qty = float(position["size"])
+
+            if self._ledger is not None:
+                ledger_qty = self._ledger.get_partial_close_qty(key)
+                if ledger_qty > 0:
+                    close_qty = ledger_qty
+
+            if self._mode == "live" and hasattr(self._executor, 'place_limit_order'):
+                # Live: close with limit order at TP price (maker fee)
+                result = await self._executor.place_limit_order(
+                    symbol=symbol, side=close_side, qty=close_qty,
+                    price=tp_price, timeout_seconds=20,
+                )
+                # If limit order timed out, fall back to market
+                if result.get("rejected") and result.get("reason") == "unfilled_timeout":
+                    logger.info("Grid TP limit unfilled, falling back to market for {}", symbol)
                     result = await self._executor.close_position(
                         symbol=symbol, side=close_side,
-                        qty=float(position["size"]), current_price=tp_price,
+                        qty=close_qty, current_price=tp_price,
                     )
             else:
-                # Paper mode: close by key or full position
+                # Paper mode
                 order_key = self._level_order_ids.get(key, "")
                 if order_key and hasattr(self._executor, 'close_position_by_key'):
                     result = await self._executor.close_position_by_key(order_key, tp_price)
                 else:
-                    close_side = "Sell" if position["side"] == "Buy" else "Buy"
                     result = await self._executor.close_position(
                         symbol=symbol, side=close_side,
-                        qty=float(position["size"]), current_price=tp_price,
+                        qty=close_qty, current_price=tp_price,
                     )
         except Exception as exc:
             logger.error("Grid TP close failed {}: {}", symbol, exc)

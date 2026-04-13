@@ -236,6 +236,113 @@ class LiveExecutor:
         )
         return result
 
+    async def place_limit_order(
+        self, symbol: str, side: str, qty: float, price: float,
+        timeout_seconds: int = 30,
+    ) -> dict:
+        """Place a PostOnly limit order. Falls back to market if not filled.
+
+        Parameters
+        ----------
+        symbol: Trading pair.
+        side: "Buy" or "Sell".
+        qty: Order quantity.
+        price: Limit price.
+        timeout_seconds: Seconds to wait before cancelling unfilled order.
+
+        Returns
+        -------
+        Dict with orderId, fillPrice, fee, etc.
+        """
+        qty = self._round_qty(symbol, qty)
+        price = self._round_price(symbol, price)
+
+        # Check min notional
+        notional = qty * price
+        info = self._get_instrument_info(symbol)
+        lot_filter = info.get("lotSizeFilter", {})
+        min_notional = float(lot_filter.get("minNotionalValue", "5"))
+        if notional < min_notional:
+            logger.info("Live LIMIT REJECT {}: notional {:.2f} < min {:.1f}",
+                        symbol, notional, min_notional)
+            return {"rejected": True, "reason": "below_min_notional",
+                    "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+
+        # Check available margin
+        try:
+            wallet = await self._run_sync(self.client.get_wallet_balance)
+            usdt = wallet.get("usdt", {})
+            available = float(usdt.get("availableToWithdraw", 0) or
+                              usdt.get("walletBalance", 0) or 0)
+            leverage = self._leverage_cache.get(symbol, 1)
+            required = notional / leverage if leverage > 0 else notional
+            if available > 0 and required > available * 0.8:
+                logger.info("Live LIMIT REJECT {}: margin {:.2f} > avail {:.2f}",
+                            symbol, required, available * 0.8)
+                return {"rejected": True, "reason": "insufficient_margin",
+                        "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+        except Exception:
+            pass
+
+        # Place PostOnly limit order
+        result = await self._run_sync(
+            self.client.place_order,
+            symbol=symbol,
+            side=side,
+            qty=str(qty),
+            order_type="Limit",
+            price=str(price),
+        )
+
+        order_id = result.get("orderId", "")
+        if not order_id:
+            logger.warning("Limit order failed for {}: no orderId", symbol)
+            return {"rejected": True, "reason": "no_order_id",
+                    "orderId": "", "fillPrice": 0.0, "fee": 0.0}
+
+        # Wait for fill with timeout
+        import time as _time
+        fill_price = 0.0
+        fee = 0.0
+        filled = False
+
+        for _ in range(timeout_seconds // 2):
+            _time.sleep(2)
+            try:
+                executions = await self._run_sync(
+                    self.client.get_executions, symbol, order_id=order_id
+                )
+                if executions:
+                    fill_price = float(executions[0].get("execPrice", price))
+                    fee = sum(abs(float(e.get("execFee", 0))) for e in executions)
+                    filled = True
+                    break
+            except Exception:
+                pass
+
+        if not filled:
+            # Cancel unfilled order
+            try:
+                await self._run_sync(
+                    self.client.cancel_order, symbol, order_id
+                )
+                logger.info("Limit order cancelled (unfilled) for {}: {}",
+                            symbol, order_id)
+            except Exception:
+                pass
+            return {"rejected": True, "reason": "unfilled_timeout",
+                    "orderId": order_id, "fillPrice": 0.0, "fee": 0.0}
+
+        result["fillPrice"] = fill_price
+        result["fee"] = fee
+        result["orderId"] = order_id
+
+        logger.info(
+            "Live LIMIT ORDER: {} {:.6f} {} @ {:.6f} (filled={:.6f}) fee={:.6f}",
+            side, qty, symbol, price, fill_price, fee,
+        )
+        return result
+
     async def place_sl_tp(
         self,
         symbol: str,

@@ -248,15 +248,16 @@ class OrderManagerProcess(multiprocessing.Process):
                 await self._monitor_positions()
                 last_monitor_time = now
 
-            # c2. For grid mode: sync balance and apply funding charges
+            # c2. For grid mode: monitor positions + sync + funding
             if self._grid_manager is not None and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
+                # Monitor SL/TP for grid positions (P3-side, no server-side SL)
+                await self._monitor_positions()
+
                 if self._mode == "paper" and isinstance(self._executor, PaperExecutor):
-                    # Apply funding rate simulation to open paper positions
                     self._apply_paper_funding()
                     self._db.set_state("current_balance_paper", str(round(self._executor.account.balance, 4)))
                     self._db.set_state("initial_balance_paper", str(round(self._executor.account.initial_balance, 4)))
 
-                # Live mode: detect server-side SL/TP fills and clean up
                 if self._mode == "live":
                     await self._sync_exchange_positions()
 
@@ -683,58 +684,72 @@ class OrderManagerProcess(multiprocessing.Process):
         fills = await self._order_manager.check_sl_tp_fills(positions)
 
         # Also check SL/TP directly with ticker prices (paper mode)
-        if self._mode == "paper":
-            for pos in list(positions):
-                symbol = pos["symbol"]
-                current_price = self._get_current_price(symbol, pos)
-                if current_price <= 0:
+        # SL/TP monitoring — works in both paper and live modes
+        # In live mode with limit orders, server-side SL is not set,
+        # so P3 must monitor prices and execute SL via market order.
+        for pos in list(positions):
+            symbol = pos["symbol"]
+            current_price = self._get_current_price(symbol, pos)
+            if current_price <= 0:
+                continue
+
+            sl = float(pos.get("stop_loss", 0))
+            tp = float(pos.get("take_profit", 0))
+            side = pos["side"]
+            entry_price = float(pos.get("entry_price", 0))
+            size = float(pos.get("size", 0))
+
+            sl_hit = False
+            tp_hit = False
+
+            if side == "Buy":  # LONG
+                if sl > 0 and current_price <= sl:
+                    sl_hit = True
+                if tp > 0 and current_price >= tp:
+                    tp_hit = True
+            else:  # SHORT
+                if sl > 0 and current_price >= sl:
+                    sl_hit = True
+                if tp > 0 and current_price <= tp:
+                    tp_hit = True
+
+            if sl_hit or tp_hit:
+                if pos.get("id") in closed_ids:
                     continue
+                fill_type = "stop_loss" if sl_hit else "take_profit"
+                fill_price = sl if sl_hit else tp
 
-                sl = float(pos.get("stop_loss", 0))
-                tp = float(pos.get("take_profit", 0))
-                side = pos["side"]
-                entry_price = float(pos.get("entry_price", 0))
-                size = float(pos.get("size", 0))
-
-                sl_hit = False
-                tp_hit = False
-
-                if side == "Buy":  # LONG
-                    if sl > 0 and current_price <= sl:
-                        sl_hit = True
-                    if tp > 0 and current_price >= tp:
-                        tp_hit = True
-                else:  # SHORT
-                    if sl > 0 and current_price >= sl:
-                        sl_hit = True
-                    if tp > 0 and current_price <= tp:
-                        tp_hit = True
-
-                if sl_hit or tp_hit:
-                    # Skip if already closed by check_sl_tp_fills
-                    if pos.get("id") in closed_ids:
+                # Live mode: execute market close immediately
+                if self._mode == "live" and sl_hit:
+                    try:
+                        close_side = "Sell" if side == "Buy" else "Buy"
+                        await self._executor.close_position(
+                            symbol=symbol, side=close_side,
+                            qty=size, current_price=current_price,
+                        )
+                        logger.info("P3 SL executed: {} {} @ {:.6f} (SL={:.6f})",
+                                    symbol, side, current_price, sl)
+                    except Exception as exc:
+                        logger.error("P3 SL execution failed {}: {}", symbol, exc)
                         continue
-                    fill_type = "stop_loss" if sl_hit else "take_profit"
-                    fill_price = sl if sl_hit else tp
 
-                    # Calculate P&L
-                    if side == "Buy":
-                        pnl = (fill_price - entry_price) * size
-                    else:
-                        pnl = (entry_price - fill_price) * size
+                if side == "Buy":
+                    pnl = (fill_price - entry_price) * size
+                else:
+                    pnl = (entry_price - fill_price) * size
 
-                    fee_rate = self._executor.taker_fee_rate if isinstance(self._executor, PaperExecutor) else 0.0006
-                    fee = abs(fill_price * size) * fee_rate
+                fee_rate = self._executor.taker_fee_rate if isinstance(self._executor, PaperExecutor) else 0.0006
+                fee = abs(fill_price * size) * fee_rate
 
-                    fills.append({
-                        "position": pos,
-                        "symbol": symbol,
-                        "side": side,
-                        "fill_price": fill_price,
-                        "fill_type": fill_type,
-                        "pnl": pnl - fee,
-                        "fee": fee,
-                    })
+                fills.append({
+                    "position": pos,
+                    "symbol": symbol,
+                    "side": side,
+                    "fill_price": fill_price,
+                    "fill_type": fill_type,
+                    "pnl": pnl - fee,
+                    "fee": fee,
+                })
 
         for fill in fills:
             fill_order_id = fill.get("order_id", fill.get("orderId", ""))
