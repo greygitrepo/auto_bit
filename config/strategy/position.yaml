@@ -1,4 +1,4 @@
-active: volatility_breakout
+active: ""  # 보조 전략 비활성화 — Grid 단독 운용
 
 strategies:
   momentum_scalper:

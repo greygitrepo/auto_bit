@@ -106,6 +106,7 @@ class PositionTracker:
         exit_reason: str,
         exit_type: str,
         fee: float = 0.0,
+        pnl_override: float = None,
     ) -> dict:
         """Close a position, record the trade, and update daily performance.
 
@@ -138,13 +139,16 @@ class PositionTracker:
             logger.error("Cannot close position {} -- not found", position_id)
             return {"pnl": 0.0, "fee": fee, "holding_minutes": 0}
 
-        gross_pnl = self._calculate_pnl(
-            side=position["side"],
-            entry_price=position["entry_price"],
-            exit_price=exit_price,
-            size=position["size"],
-        )
-        net_pnl = gross_pnl - fee
+        if pnl_override is not None:
+            net_pnl = pnl_override
+        else:
+            gross_pnl = self._calculate_pnl(
+                side=position["side"],
+                entry_price=position["entry_price"],
+                exit_price=exit_price,
+                size=position["size"],
+            )
+            net_pnl = gross_pnl - fee
 
         now_ts = int(time.time())
         holding_minutes = max(0, (now_ts - position["entered_at"]) // 60)

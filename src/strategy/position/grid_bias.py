@@ -73,6 +73,11 @@ class GridBiasStrategy:
         # Funding rate cache: symbol -> rate
         self._funding_rates: Dict[str, float] = {}
 
+        # Live slippage tracking: symbol -> [measured_slippage_bps, ...]
+        self._symbol_slippage: Dict[str, list] = {}
+        # Symbols banned due to excessive slippage
+        self._slippage_banned: set = set()
+
         # Slippage guard for dynamic min spacing
         paper_cfg = config.get("paper", {})
         self._slippage_guard = SlippageGuard({
@@ -136,6 +141,10 @@ class GridBiasStrategy:
         grid = self._grids.get(symbol)
 
         if grid is None:
+            # Skip banned symbols (consecutive TP losses)
+            if symbol in self._slippage_banned:
+                return []
+
             # Enforce max_symbols limit
             if self.max_symbols > 0 and len(self._grids) >= self.max_symbols:
                 return []
@@ -495,6 +504,24 @@ class GridBiasStrategy:
                 level.updated_at = int(time.time())
                 grid.realized_pnl += pnl
                 break
+
+        # Track per-symbol TP results — ban symbols with consistent losses
+        if symbol not in self._symbol_slippage:
+            self._symbol_slippage[symbol] = []
+        self._symbol_slippage[symbol].append(pnl)
+        # Keep last 5 results
+        self._symbol_slippage[symbol] = self._symbol_slippage[symbol][-5:]
+
+        recent = self._symbol_slippage[symbol]
+        if len(recent) >= 3 and all(p < 0 for p in recent[-3:]):
+            logger.warning(
+                "{}: 3 consecutive TP losses ({}) — banning symbol",
+                symbol, [round(p, 6) for p in recent[-3:]],
+            )
+            self._slippage_banned.add(symbol)
+            # Close this grid
+            if grid is not None:
+                self._close_grid(symbol, grid, "consecutive_tp_losses")
 
     def on_close_confirmed(self, symbol: str, level_id: int, pnl: float, fee: float) -> None:
         """Called when P3 confirms a recenter/close_all position close."""

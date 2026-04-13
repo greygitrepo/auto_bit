@@ -601,25 +601,46 @@ class OrderManagerProcess(multiprocessing.Process):
             except Exception:
                 pass
 
-            # Get closed PnL from exchange
+            # Get closed PnL from exchange — match by symbol + entry price
             pnl = 0.0
+            fee = 0.0
+            exit_price = float(pos.get("entry_price", 0))
+            pos_entry = float(pos.get("entry_price", 0))
+            pos_side = pos.get("side", "")
+            pos_size = float(pos.get("size", 0))
             try:
                 closed = await asyncio.get_event_loop().run_in_executor(
-                    None, self._bybit_client.get_closed_pnl, symbol, 5
+                    None, self._bybit_client.get_closed_pnl, symbol, 20
                 )
+                # Find the matching close: same side, similar qty, most recent
+                best_match = None
                 for cp in (closed or []):
-                    pnl += float(cp.get("closedPnl", 0))
-            except Exception:
-                pass
+                    cp_side = cp.get("side", "")
+                    cp_qty = float(cp.get("qty", 0))
+                    cp_entry = float(cp.get("avgEntryPrice", 0))
+                    # Match: same side, similar entry price (within 1%)
+                    if cp_side == pos_side and abs(cp_entry - pos_entry) / max(pos_entry, 0.0001) < 0.01:
+                        best_match = cp
+                        break
+                if best_match:
+                    pnl = float(best_match.get("closedPnl", 0))
+                    fee = abs(float(best_match.get("totalFee", 0) or 0))
+                    exit_price = float(best_match.get("avgExitPrice", pos_entry))
+                    logger.info(
+                        "Server-side PnL matched: {} pnl={:+.6f} fee={:.6f} exit={:.6f}",
+                        symbol, pnl, fee, exit_price,
+                    )
+            except Exception as exc:
+                logger.debug("Failed to fetch server-side PnL for {}: {}", symbol, exc)
 
-            # Close in DB
-            entry_price = float(pos.get("entry_price", 0))
+            # Close in DB with actual PnL
             self._position_tracker.close_position(
                 position_id=position_id,
-                exit_price=entry_price,  # Approximate
+                exit_price=exit_price,
                 exit_reason="server_side_sl_tp",
                 exit_type="server_side",
-                fee=0.0,
+                fee=fee,
+                pnl_override=pnl if pnl != 0 else None,
             )
 
             # Clean up grid manager mapping if applicable
