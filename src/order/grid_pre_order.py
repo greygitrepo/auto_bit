@@ -63,6 +63,7 @@ class GridPreOrderManager:
         mode: str,
         initial_balance: float,
         leverage: int,
+        qty_per_level_pct: float = 5.0,
     ) -> None:
         self._executor = executor
         self._client = bybit_client
@@ -71,6 +72,7 @@ class GridPreOrderManager:
         self._mode = mode
         self._initial_balance = initial_balance
         self._leverage = leverage
+        self._qty_per_level_pct = qty_per_level_pct
 
         # symbol -> {level_index: order_id}
         self._pending_orders: Dict[str, Dict[int, str]] = {}
@@ -105,37 +107,35 @@ class GridPreOrderManager:
     async def place_grid_orders(
         self,
         symbol: str,
-        grid_state: dict,
-        current_balance: float,
+        levels: list = None,
+        current_balance: float = 0.0,
+        qty_per_level: float = 0.0,
+        leverage: int = 0,
+        grid_state: dict = None,
     ) -> int:
         """Place limit orders for all PENDING levels of a grid.
 
-        Parameters
-        ----------
-        symbol:
-            Trading pair, e.g. ``"BTCUSDT"``.
-        grid_state:
-            Grid state dict containing at least:
-              - ``levels``: list of level dicts with ``price``, ``side``,
-                ``status``, and ``index``.
-              - ``qty_per_level_pct``: percentage of balance per level.
-              - ``leverage``: grid leverage.
-        current_balance:
-            Current USDT balance available.
-
-        Returns
-        -------
-        Number of orders successfully placed.
+        Can be called with either:
+        - levels, current_balance, qty_per_level, leverage (from P3 SETUP signal)
+        - grid_state dict (legacy)
         """
-        levels = grid_state.get("levels", [])
-        qty_pct = grid_state.get("qty_per_level_pct", self._sizing.qty_per_level_pct)
-        leverage = grid_state.get("leverage", self._leverage)
+        if grid_state is not None:
+            levels = grid_state.get("levels", [])
+            qty_per_level = grid_state.get("qty_per_level", 0)
+            leverage = grid_state.get("leverage", self._leverage)
 
-        # Filter to pending levels only
-        pending = [
-            lv for lv in levels
-            if lv.get("status", "").upper() == "PENDING"
-        ]
+        if not levels:
+            return 0
+        if leverage <= 0:
+            leverage = self._leverage
+        if current_balance <= 0:
+            current_balance = self._initial_balance
+
+        qty_pct = self._qty_per_level_pct
+
+        # Levels from SETUP signal are dicts with price/side/tp_price/sl_price
+        # They are all pending by definition
+        pending = levels
         if not pending:
             logger.debug("GridPreOrder: no pending levels for {}", symbol)
             return 0
