@@ -138,6 +138,7 @@ class GridAction(Enum):
     TP_HIT = "TP_HIT"        # TP reached on a filled level → close position
     RECENTER = "RECENTER"    # Grid recentered → cancel/close out-of-range levels
     CLOSE_ALL = "CLOSE_ALL"  # Emergency close all grid positions
+    SETUP = "SETUP"          # Grid created/recentered → P3 places pre-orders
 
 
 class BiasDirection(Enum):
@@ -219,3 +220,4 @@ class GridSignal:
     sl_price: float = 0.0
     grid_state_id: int = 0
     reason: str = ""
+    levels: list = None  # For SETUP action: list of level dicts

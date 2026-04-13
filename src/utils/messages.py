@@ -119,6 +119,8 @@ class GridSignalMessage:
     qty_per_level: float = 0.0
     leverage: int = 1
     reason: str = ""
+    # For SETUP action: list of {level_index, price, side, tp_price, sl_price}
+    levels: list = field(default_factory=list)
     timestamp: float = field(default_factory=time.time)
     msg_type: str = field(default="grid_signal", init=False)
 

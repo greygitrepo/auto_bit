@@ -164,8 +164,21 @@ class GridBiasStrategy:
                 return []
             self._grids[symbol] = grid
             self._last_recenter[symbol] = time.time()
-            # Defer DB persist to avoid blocking on initial bulk creation.
-            # Grid state is recovered from memory; DB is updated on first signal.
+
+            # Send SETUP signal so P3 can place pre-orders on Bybit
+            level_data = [
+                {"level_index": lv.level_index, "price": lv.price,
+                 "side": lv.side, "tp_price": lv.tp_price, "sl_price": lv.sl_price}
+                for lv in grid.levels if lv.status == GridLevelStatus.PENDING
+            ]
+            signals.append(GridSignal(
+                symbol=symbol,
+                action=GridAction.SETUP,
+                level_price=grid.center_price,
+                reason=f"Grid created: {len(level_data)} levels",
+            ))
+            # Attach levels to the signal for P3
+            signals[-1].levels = level_data
 
         # Check if grid should be recentered
         current_price = float(candle_5m.get("close", 0))

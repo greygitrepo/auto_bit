@@ -164,6 +164,23 @@ class OrderManagerProcess(multiprocessing.Process):
             if restored:
                 logger.info("P3 restored {} grid position mappings from DB", restored)
 
+            # Pre-order manager: places limit orders ahead of time on Bybit
+            self._pre_order_manager = None
+            if mode == "live" and bybit_client is not None:
+                from src.order.grid_pre_order import GridPreOrderManager
+                grid_gb = grid_config.get("strategies", {}).get("grid_bias", {})
+                self._pre_order_manager = GridPreOrderManager(
+                    executor=executor,
+                    bybit_client=bybit_client,
+                    position_tracker=self._position_tracker,
+                    sizing=grid_sizing,
+                    mode=mode,
+                    initial_balance=initial_balance,
+                    leverage=grid_gb.get("leverage", 6),
+                    qty_per_level_pct=grid_gb.get("qty_per_level_pct", 5.0),
+                )
+                logger.info("P3 grid pre-order manager initialized (live mode)")
+
         # 4. State
         self._mode = mode
         self._executor = executor
@@ -248,8 +265,60 @@ class OrderManagerProcess(multiprocessing.Process):
                 await self._monitor_positions()
                 last_monitor_time = now
 
-            # c2. For grid mode: monitor positions + sync + funding
+            # c2. For grid mode: monitor positions + sync + funding + pre-order fills
             if self._grid_manager is not None and now - last_monitor_time >= _POSITION_MONITOR_INTERVAL:
+                # Check pre-order fills (limit orders placed ahead of time)
+                if self._pre_order_manager is not None:
+                    try:
+                        fills = await self._pre_order_manager.check_fills()
+                        for fill in fills:
+                            sym = fill["symbol"]
+                            idx = fill["level_index"]
+                            fill_price = fill["fill_price"]
+                            qty = fill["qty"]
+                            fee = fill["fee"]
+                            side = fill["side"]
+                            tp_price = fill.get("tp_price", 0)
+
+                            # Record position in tracker
+                            position_id = self._position_tracker.add_position({
+                                "mode": self._mode,
+                                "symbol": sym,
+                                "side": side,
+                                "size": qty,
+                                "entry_price": fill_price,
+                                "leverage": self._pre_order_manager._leverage,
+                                "stop_loss": fill.get("sl_price", 0),
+                                "take_profit": tp_price,
+                                "margin": fill_price * qty / self._pre_order_manager._leverage,
+                                "unrealized_pnl": 0.0,
+                                "strategy": "grid_bias",
+                                "scanner_direction": "",
+                                "entered_at": int(time.time()),
+                            })
+
+                            # Place TP limit order
+                            if tp_price > 0:
+                                await self._pre_order_manager.place_tp_order(
+                                    sym, idx, side, qty, tp_price,
+                                )
+
+                            logger.info(
+                                "Pre-order FILL: {} {} idx={} @ {:.6f} qty={:.6f} pos_id={}",
+                                sym, side, idx, fill_price, qty, position_id,
+                            )
+
+                        # Check TP fills
+                        tp_fills = await self._pre_order_manager.check_tp_fills()
+                        for tp in tp_fills:
+                            sym = tp["symbol"]
+                            pnl = tp.get("pnl", 0)
+                            fee = tp.get("fee", 0)
+                            logger.info("Pre-order TP: {} pnl={:+.6f}", sym, pnl)
+
+                    except Exception as exc:
+                        logger.error("Pre-order check failed: {}", exc)
+
                 # Monitor SL/TP for grid positions (P3-side, no server-side SL)
                 await self._monitor_positions()
 
@@ -270,6 +339,14 @@ class OrderManagerProcess(multiprocessing.Process):
 
             # Brief sleep to avoid busy-spinning
             await asyncio.sleep(_QUEUE_POLL_INTERVAL)
+
+        # Cancel all pre-orders on shutdown
+        if self._pre_order_manager is not None:
+            try:
+                await self._pre_order_manager.cancel_all()
+                logger.info("P3 cancelled all pre-orders on shutdown")
+            except Exception as exc:
+                logger.error("P3 pre-order cancel on shutdown failed: {}", exc)
 
         logger.info("P3 main loop exited")
 
@@ -338,6 +415,29 @@ class OrderManagerProcess(multiprocessing.Process):
             daily_stats = self._position_tracker.get_daily_stats()
 
             for gmsg in grid_signals:
+                # Handle SETUP: place pre-orders on Bybit
+                if gmsg.action == "SETUP" and self._pre_order_manager is not None:
+                    try:
+                        await self._pre_order_manager.place_grid_orders(
+                            symbol=gmsg.symbol,
+                            levels=gmsg.levels,
+                            current_balance=current_balance,
+                            qty_per_level=gmsg.qty_per_level,
+                            leverage=gmsg.leverage,
+                        )
+                        logger.info("Pre-orders placed for {}: {} levels",
+                                    gmsg.symbol, len(gmsg.levels))
+                    except Exception as exc:
+                        logger.error("Pre-order setup failed for {}: {}", gmsg.symbol, exc)
+                    continue
+
+                # Handle RECENTER: cancel existing pre-orders first
+                if gmsg.action == "RECENTER" and self._pre_order_manager is not None:
+                    try:
+                        await self._pre_order_manager.cancel_symbol_orders(gmsg.symbol)
+                    except Exception:
+                        pass
+
                 try:
                     update = await self._grid_manager.handle_grid_signal(
                         gmsg, current_balance, open_positions, daily_stats,

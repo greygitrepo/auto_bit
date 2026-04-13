@@ -622,6 +622,7 @@ class StrategyEngineProcess(multiprocessing.Process):
                 qty_per_level=grid_state.qty_per_level if grid_state else 0,
                 leverage=grid_state.leverage if grid_state else 5,
                 reason=sig.reason,
+                levels=getattr(sig, 'levels', None) or [],
             )
             try:
                 self._signal_queue.put_nowait(msg)
