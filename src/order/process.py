@@ -873,6 +873,13 @@ class OrderManagerProcess(multiprocessing.Process):
                         )
                         logger.info("P3 SL executed: {} {} @ {:.6f} (SL={:.6f})",
                                     symbol, side, current_price, sl)
+                        # Cancel remaining pre-orders for this symbol
+                        if self._pre_order_manager is not None:
+                            try:
+                                await self._pre_order_manager.cancel_symbol_orders(symbol)
+                                logger.info("P3 SL: cancelled pre-orders for {}", symbol)
+                            except Exception:
+                                pass
                     except Exception as exc:
                         logger.error("P3 SL execution failed {}: {}", symbol, exc)
                         continue

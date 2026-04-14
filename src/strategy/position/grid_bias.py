@@ -440,6 +440,30 @@ class GridBiasStrategy:
             self._last_recenter[symbol] = time.time()
             self._persist_grid(new_grid)
 
+            # Send RECENTER to cancel old pre-orders, then SETUP for new levels
+            signals.append(GridSignal(
+                symbol=symbol,
+                action=GridAction.RECENTER,
+                reason="grid_recenter",
+            ))
+
+            new_pending = [lv for lv in new_grid.levels
+                           if lv.status == GridLevelStatus.PENDING]
+            if new_pending:
+                level_data = [
+                    {"level_index": lv.level_index, "price": lv.price,
+                     "side": lv.side, "tp_price": lv.tp_price, "sl_price": lv.sl_price}
+                    for lv in new_pending
+                ]
+                setup_sig = GridSignal(
+                    symbol=symbol,
+                    action=GridAction.SETUP,
+                    level_price=new_grid.center_price,
+                    reason=f"Recenter: {len(level_data)} new levels",
+                )
+                setup_sig.levels = level_data
+                signals.append(setup_sig)
+
             logger.info(
                 "{}: recenter keeping {} open positions, {} new pending levels",
                 symbol, len(kept_levels), len(new_grid.levels) - len(kept_levels),

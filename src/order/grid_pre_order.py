@@ -522,12 +522,27 @@ class GridPreOrderManager:
                 total_qty = sum(float(e.get("execQty", 0)) for e in executions)
                 total_fee = sum(abs(float(e.get("execFee", 0))) for e in executions)
 
+                # Calculate PnL from entry info
+                entry_info = self._filled_levels.get(symbol, {}).get(level_index, {})
+                entry_price = entry_info.get("fill_price", 0)
+                entry_side = entry_info.get("side", "Buy")
+                entry_fee = entry_info.get("fee", 0)
+                if entry_price > 0 and total_qty > 0:
+                    if entry_side == "Buy":
+                        gross_pnl = (fill_price - entry_price) * total_qty
+                    else:
+                        gross_pnl = (entry_price - fill_price) * total_qty
+                    net_pnl = gross_pnl - total_fee - entry_fee
+                else:
+                    net_pnl = 0
+
                 tp_info = {
                     "symbol": symbol,
                     "level_index": level_index,
                     "fill_price": fill_price,
                     "qty": total_qty,
-                    "fee": total_fee,
+                    "fee": total_fee + entry_fee,
+                    "pnl": net_pnl,
                     "order_id": order_id,
                 }
 
