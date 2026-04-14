@@ -475,8 +475,10 @@ class OrderManagerProcess(multiprocessing.Process):
                 if gmsg.action == "RECENTER" and self._pre_order_manager is not None:
                     try:
                         await self._pre_order_manager.cancel_symbol_orders(gmsg.symbol)
-                    except Exception:
-                        pass
+                        logger.info("Pre-order RECENTER: cancelled orders for {}", gmsg.symbol)
+                    except Exception as exc:
+                        logger.error("Pre-order RECENTER cancel failed {}: {}", gmsg.symbol, exc)
+                    continue  # Don't pass to GridPositionManager
 
                 # In pre-order mode, skip FILL/TP_HIT from P2 — pre-order handles fills
                 if self._pre_order_manager is not None and gmsg.action in ("FILL", "TP_HIT"):
@@ -1187,7 +1189,7 @@ class OrderManagerProcess(multiprocessing.Process):
         """
         now = time.time()
         # Only refresh every 5 seconds
-        if now - self._last_ticker_fetch < 5.0:
+        if now - self._last_ticker_fetch < 2.0:
             return
 
         try:

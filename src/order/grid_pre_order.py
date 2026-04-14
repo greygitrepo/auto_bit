@@ -175,9 +175,23 @@ class GridPreOrderManager:
         margin_per_level = current_balance * qty_pct / 100.0
         notional_per_level = margin_per_level * leverage
 
-        # Total margin needed for all pending levels
+        # Account for margin already used by existing positions + pending orders
+        existing_margin = 0.0
+        try:
+            open_positions = self._tracker.get_open_positions()
+            existing_margin = sum(float(p.get("margin", 0)) for p in open_positions)
+        except Exception:
+            pass
+        # Also count margin from pending pre-orders on other symbols
+        for other_sym, other_levels in self._level_info.items():
+            if other_sym != symbol:
+                existing_margin += sum(
+                    lv.get("qty", 0) * lv.get("price", 0) / leverage
+                    for lv in other_levels.values()
+                )
+
         total_margin_needed = margin_per_level * len(pending)
-        available_margin = current_balance * 0.6  # never exceed 60%
+        available_margin = max(0, current_balance * 0.6 - existing_margin)
 
         # If we'd exceed margin budget, keep only levels closest to current price
         if total_margin_needed > available_margin and margin_per_level > 0:
@@ -267,15 +281,38 @@ class GridPreOrderManager:
                         "GridPreOrder: no orderId for {} idx={}", symbol, level_index,
                     )
             except BybitAPIError as exc:
-                logger.error(
-                    "GridPreOrder: API error placing {} idx={}: {}",
-                    symbol, level_index, exc,
-                )
+                # PostOnly rejected (would match as taker) — adjust price 1 tick away
+                if "140024" in str(exc) or "post only" in str(exc).lower():
+                    try:
+                        tick = float(self._executor._get_instrument_info(symbol)
+                                     .get("priceFilter", {}).get("tickSize", "0.01"))
+                        adjusted = price - tick if side == "Buy" else price + tick
+                        result2 = await self._run_sync(
+                            self._client.place_order,
+                            symbol=symbol, side=side, qty=str(qty),
+                            order_type="Limit", price=str(adjusted),
+                        )
+                        oid2 = result2.get("orderId", "")
+                        if oid2:
+                            self._pending_orders[symbol][level_index] = oid2
+                            self._level_info[symbol][level_index] = {
+                                "price": adjusted, "side": side,
+                                "tp_price": float(lv.get("tp_price", 0)),
+                                "sl_price": float(lv.get("sl_price", 0)),
+                                "qty": qty,
+                            }
+                            placed += 1
+                            logger.info("GridPreOrder: PostOnly retry {} idx={} @ {}", symbol, level_index, adjusted)
+                    except Exception:
+                        pass
+                else:
+                    logger.error("GridPreOrder: API error {} idx={}: {}", symbol, level_index, exc)
             except Exception as exc:
-                logger.error(
-                    "GridPreOrder: unexpected error placing {} idx={}: {}",
-                    symbol, level_index, exc,
-                )
+                exc_str = str(exc)
+                if "140024" in exc_str or "post only" in exc_str.lower():
+                    logger.debug("GridPreOrder: PostOnly skip {} idx={}", symbol, level_index)
+                else:
+                    logger.error("GridPreOrder: error {} idx={}: {}", symbol, level_index, exc)
 
             # Small delay between orders to respect rate limits
             await asyncio.sleep(0.1)
@@ -344,12 +381,26 @@ class GridPreOrderManager:
                     executions = []
 
                 if not executions:
-                    # Order disappeared but no executions — likely cancelled externally
-                    logger.warning(
-                        "GridPreOrder: order {} for {} idx={} gone but no executions (cancelled?)",
-                        order_id, symbol, level_index,
-                    )
-                    level_orders.pop(level_index, None)
+                    # Order disappeared but no executions
+                    # Could be: (a) cancelled externally, (b) execution data not yet available
+                    # Keep in tracking for one more cycle to retry, then remove
+                    retry_key = f"{symbol}_{level_index}_retry"
+                    if not hasattr(self, '_retry_counts'):
+                        self._retry_counts = {}
+                    self._retry_counts[retry_key] = self._retry_counts.get(retry_key, 0) + 1
+                    if self._retry_counts[retry_key] >= 3:
+                        # After 3 retries, assume cancelled
+                        logger.warning(
+                            "GridPreOrder: order {} for {} idx={} gone after 3 retries, removing",
+                            order_id, symbol, level_index,
+                        )
+                        level_orders.pop(level_index, None)
+                        self._retry_counts.pop(retry_key, None)
+                    else:
+                        logger.debug(
+                            "GridPreOrder: order {} for {} idx={} gone, retry {}/3",
+                            order_id, symbol, level_index, self._retry_counts[retry_key],
+                        )
                     continue
 
                 # Aggregate fill info
@@ -617,8 +668,9 @@ class GridPreOrderManager:
                     symbol, level_index, exc,
                 )
 
-        # Clear filled tracking for this symbol
+        # Clear all tracking for this symbol
         self._filled_levels.pop(symbol, {})
+        self._level_info.pop(symbol, {})
 
         if cancelled > 0:
             logger.info("GridPreOrder: cancelled {} orders for {}", cancelled, symbol)
