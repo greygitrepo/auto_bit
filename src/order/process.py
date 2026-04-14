@@ -312,9 +312,30 @@ class OrderManagerProcess(multiprocessing.Process):
                         tp_fills = await self._pre_order_manager.check_tp_fills()
                         for tp in tp_fills:
                             sym = tp["symbol"]
-                            pnl = tp.get("pnl", 0)
-                            fee = tp.get("fee", 0)
-                            logger.info("Pre-order TP: {} pnl={:+.6f}", sym, pnl)
+                            tp_pnl = tp.get("pnl", 0)
+                            tp_fee = tp.get("fee", 0)
+                            tp_price = tp.get("fill_price", 0)
+                            level_idx = tp.get("level_index", 0)
+
+                            # Find and close the matching position
+                            for pos in self._position_tracker.get_open_positions():
+                                if pos.get("symbol") == sym and pos.get("strategy") == "grid_bias":
+                                    self._position_tracker.close_position(
+                                        position_id=pos["id"],
+                                        exit_price=tp_price,
+                                        exit_reason="pre_order_tp",
+                                        exit_type="take_profit",
+                                        fee=tp_fee,
+                                        pnl_override=tp_pnl if tp_pnl != 0 else None,
+                                    )
+                                    self._notify_slot_available()
+                                    # Track for auto-ban
+                                    self._pre_order_manager.record_trade_result(sym, tp_pnl)
+                                    logger.info(
+                                        "Pre-order TP: {} idx={} pnl={:+.6f} fee={:.6f}",
+                                        sym, level_idx, tp_pnl, tp_fee,
+                                    )
+                                    break
 
                     except Exception as exc:
                         logger.error("Pre-order check failed: {}", exc)
@@ -437,6 +458,10 @@ class OrderManagerProcess(multiprocessing.Process):
                         await self._pre_order_manager.cancel_symbol_orders(gmsg.symbol)
                     except Exception:
                         pass
+
+                # In pre-order mode, skip FILL/TP_HIT from P2 — pre-order handles fills
+                if self._pre_order_manager is not None and gmsg.action in ("FILL", "TP_HIT"):
+                    continue
 
                 try:
                     update = await self._grid_manager.handle_grid_signal(

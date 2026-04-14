@@ -84,6 +84,10 @@ class GridPreOrderManager:
         # Bybit limit is 50 active orders per symbol; stay well within it.
         self._max_orders_per_symbol = 20
 
+        # Per-symbol loss tracking for auto-ban
+        self._symbol_losses: Dict[str, list] = {}  # symbol -> [pnl, pnl, ...]
+        self._banned_symbols: set = set()
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -126,6 +130,9 @@ class GridPreOrderManager:
 
         if not levels:
             return 0
+        if symbol in self._banned_symbols:
+            logger.info("GridPreOrder: {} is banned, skipping", symbol)
+            return 0
         if leverage <= 0:
             leverage = self._leverage
         if current_balance <= 0:
@@ -133,9 +140,25 @@ class GridPreOrderManager:
 
         qty_pct = self._qty_per_level_pct
 
-        # Levels from SETUP signal are dicts with price/side/tp_price/sl_price
-        # They are all pending by definition
-        pending = levels
+        # Check BTC trend — skip Buy orders in bearish market
+        btc_bearish = False
+        try:
+            tickers = await self._run_sync(self._client.get_tickers)
+            btc = next((t for t in tickers if t.get("symbol") == "BTCUSDT"), None)
+            if btc:
+                price_24h_pct = float(btc.get("price24hPcnt", 0)) * 100
+                if price_24h_pct < -2.0:  # BTC down > 2% in 24h
+                    btc_bearish = True
+                    logger.info("GridPreOrder: BTC bearish ({:+.1f}%), filtering Buy orders", price_24h_pct)
+        except Exception:
+            pass
+
+        # Filter levels based on market direction
+        if btc_bearish:
+            pending = [lv for lv in levels if lv.get("side") == "Sell"]
+            logger.info("GridPreOrder: {} levels after BTC filter (Sell only)", len(pending))
+        else:
+            pending = levels
         if not pending:
             logger.debug("GridPreOrder: no pending levels for {}", symbol)
             return 0
@@ -570,6 +593,28 @@ class GridPreOrderManager:
             logger.info("GridPreOrder: cancelled {} orders for {}", cancelled, symbol)
 
         return cancelled
+
+    def record_trade_result(self, symbol: str, pnl: float) -> None:
+        """Record a trade result for symbol ban tracking."""
+        if symbol not in self._symbol_losses:
+            self._symbol_losses[symbol] = []
+        self._symbol_losses[symbol].append(pnl)
+        self._symbol_losses[symbol] = self._symbol_losses[symbol][-5:]
+
+        recent = self._symbol_losses[symbol]
+        if len(recent) >= 3 and all(p < 0 for p in recent[-3:]):
+            logger.warning(
+                "GridPreOrder: {} banned after 3 consecutive losses ({})",
+                symbol, [round(p, 4) for p in recent[-3:]],
+            )
+            self._banned_symbols.add(symbol)
+            # Cancel existing orders for this symbol
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self.cancel_symbol_orders(symbol))
+            except Exception:
+                pass
 
     async def cancel_all(self) -> int:
         """Cancel all orders across all symbols (shutdown).
