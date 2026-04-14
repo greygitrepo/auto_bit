@@ -279,6 +279,25 @@ class OrderManagerProcess(multiprocessing.Process):
                             fee = fill["fee"]
                             side = fill["side"]
                             tp_price = fill.get("tp_price", 0)
+                            sl_price = fill.get("sl_price", 0)
+
+                            # Auto-calculate SL if missing
+                            if sl_price <= 0 and fill_price > 0:
+                                # SL = 1.5x spacing distance from entry
+                                spacing = abs(tp_price - fill_price) if tp_price > 0 else fill_price * 0.01
+                                sl_mult = 1.5
+                                if side == "Buy":
+                                    sl_price = fill_price - spacing * sl_mult
+                                else:
+                                    sl_price = fill_price + spacing * sl_mult
+
+                            # Auto-calculate TP if missing
+                            if tp_price <= 0 and fill_price > 0:
+                                spacing = fill_price * 0.01  # 1% default
+                                if side == "Buy":
+                                    tp_price = fill_price + spacing
+                                else:
+                                    tp_price = fill_price - spacing
 
                             # Record position in tracker
                             position_id = self._position_tracker.add_position({
@@ -288,7 +307,7 @@ class OrderManagerProcess(multiprocessing.Process):
                                 "size": qty,
                                 "entry_price": fill_price,
                                 "leverage": self._pre_order_manager._leverage,
-                                "stop_loss": fill.get("sl_price", 0),
+                                "stop_loss": sl_price,
                                 "take_profit": tp_price,
                                 "margin": fill_price * qty / self._pre_order_manager._leverage,
                                 "unrealized_pnl": 0.0,

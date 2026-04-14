@@ -76,6 +76,8 @@ class GridPreOrderManager:
 
         # symbol -> {level_index: order_id}
         self._pending_orders: Dict[str, Dict[int, str]] = {}
+        # symbol -> {level_index: {price, side, tp_price, sl_price, qty}}
+        self._level_info: Dict[str, Dict[int, dict]] = {}
         # symbol -> {level_index: tp_order_id}
         self._tp_orders: Dict[str, Dict[int, str]] = {}
         # symbol -> {level_index: fill_info_dict}
@@ -205,9 +207,11 @@ class GridPreOrderManager:
                 len(levels), max_levels, symbol,
             )
 
-        # Initialize tracking dict for this symbol
+        # Initialize tracking dicts for this symbol
         if symbol not in self._pending_orders:
             self._pending_orders[symbol] = {}
+        if symbol not in self._level_info:
+            self._level_info[symbol] = {}
 
         placed = 0
         for lv in pending:
@@ -246,6 +250,13 @@ class GridPreOrderManager:
                 order_id = result.get("orderId", "")
                 if order_id:
                     self._pending_orders[symbol][level_index] = order_id
+                    self._level_info[symbol][level_index] = {
+                        "price": level_price,
+                        "side": side,
+                        "tp_price": float(lv.get("tp_price", 0)),
+                        "sl_price": float(lv.get("sl_price", 0)),
+                        "qty": qty,
+                    }
                     placed += 1
                     logger.info(
                         "GridPreOrder: placed {} {} idx={} price={} qty={} -> {}",
@@ -347,6 +358,9 @@ class GridPreOrderManager:
                 total_fee = sum(abs(float(e.get("execFee", 0))) for e in executions)
                 side = executions[0].get("side", "Buy")
 
+                # Get tp/sl from cached level info
+                lv_info = self._level_info.get(symbol, {}).get(level_index, {})
+
                 fill_info = {
                     "symbol": symbol,
                     "level_index": level_index,
@@ -355,6 +369,8 @@ class GridPreOrderManager:
                     "qty": total_qty,
                     "fee": total_fee,
                     "order_id": order_id,
+                    "tp_price": lv_info.get("tp_price", 0),
+                    "sl_price": lv_info.get("sl_price", 0),
                 }
 
                 # Move from pending to filled
